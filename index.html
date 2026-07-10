@@ -169,14 +169,18 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
 
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" onerror="window.__fbLoadError='app-compat.js 로드 실패'"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" onerror="window.__fbLoadError='auth-compat.js 로드 실패'"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" onerror="window.__fbLoadError='database-compat.js 로드 실패'"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" onerror="window.__fbLoadErrors=(window.__fbLoadErrors||[]);window.__fbLoadErrors.push('app-compat.js')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" onerror="window.__fbLoadErrors=(window.__fbLoadErrors||[]);window.__fbLoadErrors.push('auth-compat.js')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" onerror="window.__fbLoadErrors=(window.__fbLoadErrors||[]);window.__fbLoadErrors.push('database-compat.js')"></script>
 <script>
 (function(){
   try{
+    if(window.__fbLoadErrors && window.__fbLoadErrors.length){
+      window.__fbLoadError = window.__fbLoadErrors.join(', ')+' 로드 실패 (네트워크/광고차단/추적방지 기능 확인)';
+      return;
+    }
     if(!window.firebase){
-      window.__fbLoadError = window.__fbLoadError || 'Firebase SDK가 로드되지 않았습니다 (네트워크/광고차단 확인)';
+      window.__fbLoadError = 'Firebase SDK가 로드되지 않았습니다 (네트워크/광고차단/추적방지 기능 확인)';
       return;
     }
     var firebaseConfig={
@@ -565,14 +569,15 @@ var currentUser=null;
 var currentNickname=null;
 var syncTimer=null;
 function nickKey(nick){ return nick.trim().toLowerCase(); }
+function dbNickKey(nick){ return encodeURIComponent(nickKey(nick)); }
 async function lookupEmailByNickname(nick){
   if(!fbReady()) return null;
-  var snap=await firebase.database().ref('nicknameIndex/'+nickKey(nick)).once('value');
+  var snap=await firebase.database().ref('nicknameIndex/'+dbNickKey(nick)).once('value');
   var val=snap.val();
   return (val && val.email) ? val.email : null;
 }
 async function registerNickname(nick, uid, email){
-  await firebase.database().ref('nicknameIndex/'+nickKey(nick)).set({uid:uid, email:email});
+  await firebase.database().ref('nicknameIndex/'+dbNickKey(nick)).set({uid:uid, email:email, nickname:nick});
 }
 async function doSignup(nick, pin){
   var existing=await lookupEmailByNickname(nick);
@@ -729,7 +734,7 @@ async function fetchLeaderboard(){
 }
 async function submitScore(name, wave, kills){
   if(!fbReady()) throw new Error('firebase not ready');
-  var key=nickKey(name);
+  var key=dbNickKey(name);
   var entry={name:name, wave:wave, kills:kills, ts:Date.now()};
   if(currentUser) entry.uid=currentUser.uid;
   var improved=true;
