@@ -2220,9 +2220,13 @@ function towerDamageWith(dmgBase, t){ return dmgBase*G.buffDmg*(1+(t.fusionGrade
 function towerRangeWith(rangeBase, t){ return rangeBase*G.buffRange*(1+(t.fusionGrade||0)*0.05); }
 // 레벨이 오를수록 업그레이드 1회당 공격력 증가율이 점점 완만해짐 (체감 수확)
 // Lv1→2: +35%, Lv5→6: +약22%, Lv9→10: +약16%, Lv19→20: +약10%
-function upgradeDmgMult(level){ return 1 + 0.35/(1+(level-1)*0.15); }
+function upgradeDmgMult(level){
+    return 1 + 0.18/(1+(level-1)*0.10);
+}
 // 업그레이드 비용은 위 공격력 증가율과 보조를 맞춰 지수적으로 상승 (더 이상 레벨에 선형이 아님)
-function upgradeCost(t){ return Math.round(t.baseCost*0.6*Math.pow(1.22, t.level-1)); }
+function upgradeCost(t){
+    return Math.round(t.baseCost*0.8*Math.pow(1.28, t.level-1));
+}
 function upgradeStatLines(t){
   var lines=[];
   var curDmg=Math.round(towerDamage(t)), newDmg=Math.round(towerDamageWith(Math.round(t.dmg*upgradeDmgMult(t.level)), t));
