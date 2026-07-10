@@ -81,6 +81,11 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       <div style="font-size:19px; font-weight:800; letter-spacing:0.5px; line-height:1.1; background:linear-gradient(135deg,#F0B90B 0%,#E0672B 55%,#E24B4A 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 16px rgba(240,185,11,0.3); font-family:sans-serif;">미니타워디펜스</div>
       <div style="font-size:9.5px; opacity:0.8; letter-spacing:0.3px; margin-bottom:2px;">경로를 지키는 무한 웨이브 타워 디펜스</div>
       <div style="font-size:9.5px; opacity:0.85;">시작하면 <b style="color:#29B6C6;">5초</b>의 배치 준비 시간이 주어집니다</div>
+      <div id="tdLevelInfo" style="font-size:9.5px; opacity:0.85; margin-top:2px;">Lv1 · 0/100 XP</div>
+      <div id="tdSkipRow" style="display:none; align-items:center; justify-content:center; gap:6px; margin-top:4px; font-size:10px; width:100%; max-width:220px;">
+        <span style="opacity:0.85;">시작 웨이브</span>
+        <select id="tdSkipSelect" style="padding:5px 7px; border-radius:6px; background:rgba(255,255,255,0.1); color:#fff; border:0.5px solid rgba(255,255,255,0.3); font-size:10.5px;"></select>
+      </div>
       <div id="tdAuthMenu" style="display:flex; flex-direction:column; gap:5px; width:100%; max-width:220px; margin-top:6px;">
         <button id="tdLoginBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">로그인</button>
         <button id="tdSignupBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">회원가입</button>
@@ -565,6 +570,23 @@ var RESEARCH_DEFS={
 };
 var research={startGold:0,dmg:0,crit:0,goldGain:0,waveReward:0};
 var researchPoints=0;
+var userXP=0;
+var selectedSkipWave=1;
+function loadLocalXP(){
+  try{ var v=localStorage.getItem('mtdd_userXP'); userXP=v?parseInt(v,10)||0:0; }catch(e){ userXP=0; }
+}
+function saveLocalXP(){
+  try{ localStorage.setItem('mtdd_userXP', String(userXP)); }catch(e){}
+}
+function levelFromXP(xp){ return Math.floor(xp/100)+1; }
+function xpIntoLevel(xp){ return xp%100; }
+function maxSkipWaveForLevel(level){ return Math.min(30, (level-1)*5); }
+function estimateSkipGold(skipWave){
+  if(skipWave<=1) return 0;
+  var n=skipWave-1;
+  return Math.round(20*(Math.pow(1.12,n)-1)/0.12);
+}
+loadLocalXP();
 var currentUser=null;
 var currentNickname=null;
 var syncTimer=null;
@@ -596,11 +618,12 @@ async function doLogin(nick, pin){
   return cred;
 }
 function scheduleSync(){
+  saveLocalXP();
   if(!currentUser || !fbReady()) return;
   clearTimeout(syncTimer);
   syncTimer=setTimeout(function(){
     firebase.database().ref('users/'+currentUser.uid+'/save').set({
-      research:research, researchPoints:researchPoints, sessionBest:sessionBest, updatedAt:Date.now()
+      research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, updatedAt:Date.now()
     }).catch(function(e){ console.error('sync failed', e); });
   }, 1200);
 }
@@ -614,8 +637,11 @@ async function loadOrInitSave(user, nickHint){
       if(data.research){ Object.keys(research).forEach(function(k){ if(typeof data.research[k]==='number') research[k]=data.research[k]; }); }
       if(typeof data.researchPoints==='number') researchPoints=data.researchPoints;
       if(typeof data.sessionBest==='number') sessionBest=Math.max(sessionBest, data.sessionBest);
+      if(typeof data.userXP==='number') userXP=Math.max(userXP, data.userXP);
+      saveLocalXP();
+      refreshLevelUI();
     } else {
-      await firebase.database().ref('users/'+user.uid+'/save').set({research:research, researchPoints:researchPoints, sessionBest:sessionBest, updatedAt:Date.now()});
+      await firebase.database().ref('users/'+user.uid+'/save').set({research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, updatedAt:Date.now()});
     }
     var profileRef=firebase.database().ref('users/'+user.uid+'/profile');
     var pSnap=await profileRef.once('value');
@@ -793,7 +819,11 @@ function closeRank(){
 
 var G={};
 function resetGame(){
-  G.money=400+research.startGold*50; G.lives=20; G.wave=0;
+  var userLevel=levelFromXP(userXP);
+  var skipWave = Math.min(selectedSkipWave, maxSkipWaveForLevel(userLevel)) || 1;
+  var skipGold = estimateSkipGold(skipWave);
+  var levelGoldBonus = (userLevel-1)*15;
+  G.money=400+research.startGold*50+skipGold+levelGoldBonus; G.lives=20; G.wave=Math.max(0,skipWave-1);
   G.state='intermission'; G.intermissionTimer=5000;
   G.spawnGap=600; G.remainingToSpawn=0; G.spawnTimer=0; G.bossQueued=false; G.miniBossQueued=false;
   G.crateWave=0; G.crateSpawned=false; G.bossFocus=false; G.lastPlacement=null;
@@ -1164,9 +1194,15 @@ function update(dt){
     sessionBest=Math.max(sessionBest,G.wave);
     var earned=Math.floor(G.wave*0.6+G.totalKills*0.02);
     researchPoints+=earned;
+    var prevLevel=levelFromXP(userXP);
+    userXP+=earned;
+    saveLocalXP();
     scheduleSync();
+    refreshLevelUI();
+    var newLevel=levelFromXP(userXP);
+    var levelUpHtml = newLevel>prevLevel ? ('<br><span style="color:#F0B90B;">레벨 업! Lv'+newLevel+' 달성 (최대 '+maxSkipWaveForLevel(newLevel)+'웨이브까지 스킵 가능)</span>') : '';
     overlayTitle.textContent='게임 오버';
-    overlaySub.innerHTML='도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득';
+    overlaySub.innerHTML='도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml;
     G.finalWave=G.wave; G.finalKills=G.totalKills;
     rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록';
     overlay.style.display='flex';
@@ -2140,6 +2176,8 @@ function closePassive(){
 }
 
 function beginOfflinePlay(){
+  refreshLevelUI();
+  resetGame();
   ensureAudio();
   startMusic();
   startOverlay.style.display='none';
@@ -2375,8 +2413,33 @@ rankNameInput.addEventListener('keydown', function(ev){
   if(ev.key==='Enter') document.getElementById('tdRankSubmitBtn').click();
 });
 
+function refreshLevelUI(){
+  var level=levelFromXP(userXP);
+  var into=xpIntoLevel(userXP);
+  document.getElementById('tdLevelInfo').textContent='Lv'+level+' · '+into+'/100 XP';
+  var maxSkip=maxSkipWaveForLevel(level);
+  var skipRow=document.getElementById('tdSkipRow');
+  var sel=document.getElementById('tdSkipSelect');
+  if(maxSkip>=5){
+    skipRow.style.display='flex';
+    var opts=[1];
+    for(var w=5; w<=maxSkip; w+=5) opts.push(w);
+    var prevVal=sel.value;
+    sel.innerHTML=opts.map(function(w){ return '<option value="'+w+'">'+(w===1? '1 (처음부터)' : w+'웨이브 (+'+fmt(estimateSkipGold(w))+'G)')+'</option>'; }).join('');
+    if(opts.indexOf(parseInt(prevVal,10))>=0) sel.value=prevVal;
+    selectedSkipWave=parseInt(sel.value,10)||1;
+  } else {
+    skipRow.style.display='none';
+    selectedSkipWave=1;
+  }
+}
+document.getElementById('tdSkipSelect').addEventListener('change', function(){
+  selectedSkipWave=parseInt(this.value,10)||1;
+});
+
 initIcons();
 applyTheme();
+refreshLevelUI();
 resetGame();
 requestAnimationFrame(loop);
 })();
