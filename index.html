@@ -81,6 +81,10 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       <div style="font-size:19px; font-weight:800; letter-spacing:0.5px; line-height:1.1; background:linear-gradient(135deg,#F0B90B 0%,#E0672B 55%,#E24B4A 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 16px rgba(240,185,11,0.3); font-family:sans-serif;">미니타워디펜스</div>
       <div style="font-size:9.5px; opacity:0.8; letter-spacing:0.3px; margin-bottom:2px;">경로를 지키는 무한 웨이브 타워 디펜스</div>
       <div style="font-size:8.5px; opacity:0.55; letter-spacing:0.3px;">v1.0 · 만든사람 : 삼브</div>
+      <div style="display:flex; gap:5px; margin-top:4px;">
+        <button id="tdTutorialBtn" style="padding:5px 10px; font-size:9.5px; font-weight:600; border-radius:7px; border:1px solid rgba(41,182,198,0.5); background:rgba(41,182,198,0.12); color:#8FD8E8;">📘 튜토리얼</button>
+        <button id="tdWikiBtn" style="padding:5px 10px; font-size:9.5px; font-weight:600; border-radius:7px; border:1px solid rgba(240,185,11,0.5); background:rgba(240,185,11,0.12); color:#F0D08F;">📖 도감</button>
+      </div>
       <div style="font-size:9.5px; opacity:0.85;">시작하면 <b style="color:#29B6C6;">5초</b>의 배치 준비 시간이 주어집니다</div>
       <div id="tdLevelInfo" style="font-size:9.5px; opacity:0.85; margin-top:2px;">Lv1 · 0/100 XP</div>
       <div id="tdSkipRow" style="display:none; align-items:center; justify-content:center; gap:6px; margin-top:4px; font-size:10px; width:100%; max-width:220px;">
@@ -142,6 +146,25 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
         <button id="tdTestGoldBtn" style="padding:3px 6px; font-size:9.5px;">설정</button>
       </div>
       <button id="tdTestExitBtn" style="padding:4px 6px; font-size:9.5px; margin-top:2px;">테스트 종료</button>
+    </div>
+    <div id="tdTutorialOverlay" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:rgba(0,0,0,0.9); border-radius:var(--radius); color:#fff; text-align:center; padding:16px 12px; overflow-y:auto;">
+      <div id="tdTutStepDots" style="display:flex; gap:4px; margin-bottom:2px;"></div>
+      <div id="tdTutTitle" style="font-size:15px; font-weight:700; color:#F0B90B;"></div>
+      <div id="tdTutBody" style="font-size:11.5px; line-height:1.7; max-width:280px; opacity:0.9;"></div>
+      <div style="display:flex; gap:6px; margin-top:10px; width:100%; max-width:280px;">
+        <button id="tdTutPrevBtn" style="flex:1; padding:8px; font-size:11px; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">이전</button>
+        <button id="tdTutNextBtn" style="flex:2; padding:8px; font-size:12px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200;">다음</button>
+      </div>
+      <button id="tdTutSkipBtn" style="margin-top:4px; padding:6px 14px; font-size:10.5px; border-radius:9px; border:none; background:transparent; color:rgba(255,255,255,0.5); text-decoration:underline;">건너뛰기</button>
+    </div>
+    <div id="tdWikiOverlay" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; background:rgba(0,0,0,0.88); border-radius:var(--radius); color:#fff; padding:12px 10px; text-align:center; overflow-y:auto;">
+      <div style="font-size:14px; font-weight:700;">📖 도감</div>
+      <div style="display:flex; gap:6px;">
+        <button id="tdWikiTabTower" class="tdWikiTab" style="padding:6px 14px; font-size:11px; font-weight:600; border-radius:8px; border:1px solid rgba(240,185,11,0.5); background:rgba(240,185,11,0.25); color:#fff;">타워</button>
+        <button id="tdWikiTabMonster" class="tdWikiTab" style="padding:6px 14px; font-size:11px; font-weight:600; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:#fff;">몬스터</button>
+      </div>
+      <div id="tdWikiList" style="display:flex; flex-direction:column; gap:6px; width:100%; max-width:340px; margin-top:2px;"></div>
+      <button id="tdWikiCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
     </div>
     <div id="tdOverlay" style="position:absolute; inset:0; display:none; align-items:center; justify-content:flex-start; flex-direction:column; gap:8px; background:rgba(0,0,0,0.6); border-radius:var(--radius); color:#fff; text-align:center; padding:16px 10px; overflow-y:auto;">
       <div style="font-size:16px; font-weight:500; margin-top:6px;" id="tdOverlayTitle">게임 오버</div>
@@ -2461,6 +2484,125 @@ var legendColors={normal:'#F0997B',armored:'#8A8F98',rush:'#FF6B4A',flying:'#5AC
 legendEl.innerHTML=legendData.map(function(l){
   return '<span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px;height:7px;border-radius:50%;background:'+legendColors[l[0]]+'; display:inline-block;"></span>'+l[1]+'</span>';
 }).join('');
+
+var MONSTER_DESC={
+  normal:{unlock:1, desc:'특별한 능력이 없는 기본 몬스터입니다.'},
+  armored:{unlock:4, desc:'체력이 2.3배 높지만 이동속도는 절반입니다. 화력을 집중해서 잡아야 합니다.'},
+  rush:{unlock:6, desc:'체력은 절반이지만 속도가 1.9배로 매우 빠릅니다. 빠르게 처치하지 못하면 그냥 지나칩니다.'},
+  flying:{unlock:13, desc:'하늘을 날아서 지상 타워로는 공격할 수 없습니다. 미사일터렛(공중 전용)으로만 잡을 수 있습니다.'},
+  regen:{unlock:9, desc:'초당 체력의 2%를 회복합니다. 지속적으로 딜을 넣지 못하면 다시 차오릅니다.'},
+  thief:{unlock:10, desc:'기지에 도달하면 생명뿐 아니라 골드까지 훔쳐갑니다.'},
+  split:{unlock:13, desc:'죽으면 약한 자식 2마리로 분열합니다.'},
+  ironclad:{unlock:17, desc:'슬로우에 면역이고, 관통포를 제외한 모든 타워의 데미지가 40% 감소합니다. 관통포는 오히려 1.5배 데미지.'},
+  titan:{unlock:25, desc:'기지에 도달하면 생명을 2개 소모하는 거대 몬스터입니다.'},
+  cloner:{unlock:40, desc:'죽으면 3마리로 분열합니다 (분열보다 강력한 버전).'},
+  phantom:{unlock:60, desc:'3초 주기로 1초간 투명해져서 그동안 어떤 타워로도 타겟팅할 수 없습니다.'},
+  vampire:{unlock:80, desc:'주변에서 다른 몹이 죽을 때마다 체력을 회복합니다. 근처 잡몹을 먼저 정리하는 게 좋습니다.'},
+  crate:{desc:'10웨이브 블록마다 무작위로 등장하는 보급상자입니다. 체력이 낮고 빠르게 지나가며, 부수면 골드 10배 + 연구P 보너스 확률. 못 잡아도 생명 손실은 없습니다.'},
+  miniboss:{desc:'보스 웨이브가 아닌 5웨이브 배수마다 등장하는 강화 몬스터입니다. 일반 보스보다는 약합니다.'},
+  boss:{desc:'10웨이브마다 등장. 기갑형(EMP·돌진·실드)/소환형(잡몹 소환)/지휘관형(주변 실드 부여) 3종류 중 무작위로 나타납니다.'}
+};
+var wikiTab='tower';
+function renderWiki(){
+  var listEl=document.getElementById('tdWikiList');
+  if(wikiTab==='tower'){
+    listEl.innerHTML=ORDER.map(function(key){
+      var d=TOWER_DEFS[key];
+      var abilities=abilityLines(key, d);
+      var abilityHtml=abilities.length? abilities.map(function(l){ return '<div style="font-size:9.5px; opacity:0.75;">• '+l+'</div>'; }).join('') : '';
+      var lockHtml = d.unlockWave? '<div style="font-size:9.5px; color:#8FD8E8;">웨이브 '+d.unlockWave+' 해금</div>' : '';
+      return '<div style="text-align:left; background:rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">'
+        +'<div style="font-size:12px; font-weight:700;"><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:'+d.color+'; margin-right:5px;"></span>'+d.name+' <span style="opacity:0.6; font-weight:400;">'+fmt(d.cost)+'G</span></div>'
+        +'<div style="font-size:9.5px; opacity:0.8; margin-top:2px;">공격력 '+d.dmg+' · 사거리 '+d.range+' · 공속 '+(d.rate/1000).toFixed(2)+'초</div>'
+        +abilityHtml+lockHtml
+      +'</div>';
+    }).join('');
+  } else {
+    var keys=legendData.map(function(l){ return l[0]; });
+    listEl.innerHTML=keys.map(function(key){
+      var name=legendData.find(function(l){ return l[0]===key; })[1];
+      var color=legendColors[key];
+      var info=MONSTER_DESC[key]||{desc:''};
+      var lockHtml = info.unlock? '<div style="font-size:9.5px; color:#8FD8E8;">웨이브 '+info.unlock+'부터 등장</div>' : '';
+      return '<div style="text-align:left; background:rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">'
+        +'<div style="font-size:12px; font-weight:700;"><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:'+color+'; margin-right:5px;"></span>'+name+'</div>'
+        +'<div style="font-size:9.5px; opacity:0.8; margin-top:2px;">'+info.desc+'</div>'
+        +lockHtml
+      +'</div>';
+    }).join('');
+  }
+}
+function openWiki(){
+  wikiTab='tower';
+  document.getElementById('tdWikiTabTower').style.background='rgba(240,185,11,0.25)';
+  document.getElementById('tdWikiTabTower').style.borderColor='rgba(240,185,11,0.5)';
+  document.getElementById('tdWikiTabMonster').style.background='rgba(255,255,255,0.06)';
+  document.getElementById('tdWikiTabMonster').style.borderColor='rgba(255,255,255,0.2)';
+  renderWiki();
+  document.getElementById('tdWikiOverlay').style.display='flex';
+}
+document.getElementById('tdWikiBtn').addEventListener('click', openWiki);
+document.getElementById('tdWikiCloseBtn').addEventListener('click', function(){
+  document.getElementById('tdWikiOverlay').style.display='none';
+});
+document.getElementById('tdWikiTabTower').addEventListener('click', function(){
+  wikiTab='tower';
+  this.style.background='rgba(240,185,11,0.25)'; this.style.borderColor='rgba(240,185,11,0.5)';
+  var m=document.getElementById('tdWikiTabMonster');
+  m.style.background='rgba(255,255,255,0.06)'; m.style.borderColor='rgba(255,255,255,0.2)';
+  renderWiki();
+});
+document.getElementById('tdWikiTabMonster').addEventListener('click', function(){
+  wikiTab='monster';
+  this.style.background='rgba(240,185,11,0.25)'; this.style.borderColor='rgba(240,185,11,0.5)';
+  var t=document.getElementById('tdWikiTabTower');
+  t.style.background='rgba(255,255,255,0.06)'; t.style.borderColor='rgba(255,255,255,0.2)';
+  renderWiki();
+});
+
+var TUTORIAL_STEPS=[
+  {title:'환영합니다!', body:'미니타워디펜스는 경로를 따라 오는 몬스터를 타워로 막아, 생명이 0이 될 때까지 최대한 오래 버티는 무한 웨이브 디펜스 게임입니다.'},
+  {title:'골드 · 생명 · 웨이브', body:'상단 HUD에서 골드(타워 구매 자원), 생명(다 떨어지면 게임 오버), 현재 웨이브를 확인할 수 있습니다. 몬스터가 경로 끝까지 도달하면 생명이 줄어듭니다.'},
+  {title:'타워 배치하기', body:'하단 타워 상점에서 타워를 선택한 뒤, 경로 옆 빈 칸을 탭하면 배치됩니다. 타워마다 사거리·공격력·특수 능력이 다르니 상황에 맞게 조합하세요.'},
+  {title:'타워 관리', body:'배치된 타워를 탭하면 업그레이드·판매 메뉴가 뜹니다. 방금 배치한 타워는 10초 안에 "되돌리기"로 전액 환불받을 수 있어요 (터치 실수 방지).'},
+  {title:'웨이브 보상 & 강화 선택', body:'웨이브를 클리어할 때마다 골드 보너스를 받습니다. 5웨이브마다는 치명타·공격속도 등 강화 효과를 하나 골라 이번 판에 적용할 수 있습니다.'},
+  {title:'추가 시스템', body:'같은 타워 3개를 모으면 "타워 합성"으로 강화할 수 있고, "연구소"에서는 영구 강화를 살 수 있습니다. 10웨이브마다 무작위로 등장하는 "보급상자"도 놓치지 마세요. 보스는 10웨이브마다, 미니보스는 5웨이브마다 등장합니다.'},
+  {title:'모든 정보는 도감에서', body:'모든 타워와 몬스터의 세부 정보는 타이틀 화면의 "📖 도감" 버튼에서 언제든 확인할 수 있습니다. 이제 게임을 시작해볼까요?'}
+];
+var tutStep=0;
+function renderTutStep(){
+  var s=TUTORIAL_STEPS[tutStep];
+  document.getElementById('tdTutTitle').textContent=s.title;
+  document.getElementById('tdTutBody').textContent=s.body;
+  document.getElementById('tdTutPrevBtn').style.visibility = tutStep===0? 'hidden':'visible';
+  document.getElementById('tdTutNextBtn').textContent = tutStep===TUTORIAL_STEPS.length-1? '시작하기' : '다음';
+  document.getElementById('tdTutStepDots').innerHTML=TUTORIAL_STEPS.map(function(_,i){
+    return '<span style="width:6px; height:6px; border-radius:50%; background:'+(i===tutStep? '#F0B90B':'rgba(255,255,255,0.25)')+';"></span>';
+  }).join('');
+}
+function openTutorial(){
+  tutStep=0;
+  renderTutStep();
+  document.getElementById('tdTutorialOverlay').style.display='flex';
+}
+function closeTutorial(){
+  document.getElementById('tdTutorialOverlay').style.display='none';
+  try{ localStorage.setItem('mtdd_tutorial_seen','1'); }catch(e){}
+}
+document.getElementById('tdTutorialBtn').addEventListener('click', openTutorial);
+document.getElementById('tdTutSkipBtn').addEventListener('click', closeTutorial);
+document.getElementById('tdTutPrevBtn').addEventListener('click', function(){
+  if(tutStep>0){ tutStep--; renderTutStep(); }
+});
+document.getElementById('tdTutNextBtn').addEventListener('click', function(){
+  if(tutStep<TUTORIAL_STEPS.length-1){ tutStep++; renderTutStep(); }
+  else { closeTutorial(); }
+});
+(function autoShowTutorialForNewUser(){
+  try{
+    if(!localStorage.getItem('mtdd_tutorial_seen')) openTutorial();
+  }catch(e){}
+})();
 
 function showChoiceOverlay(){
   var keys=shuffle(Object.keys(CHOICE_DEFS)).slice(0,3);
