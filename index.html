@@ -90,10 +90,11 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       <div id="tdTitleIcon" style="width:30px; height:30px; filter:drop-shadow(0 0 8px rgba(240,185,11,0.65));"></div>
       <div style="font-size:19px; font-weight:800; letter-spacing:0.5px; line-height:1.1; background:linear-gradient(135deg,#F0B90B 0%,#E0672B 55%,#E24B4A 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 16px rgba(240,185,11,0.3); font-family:sans-serif;">미니타워디펜스</div>
       <div style="font-size:9.5px; opacity:0.8; letter-spacing:0.3px; margin-bottom:2px;">경로를 지키는 무한 웨이브 타워 디펜스</div>
-      <div style="font-size:8.5px; opacity:0.55; letter-spacing:0.3px;">v1.7 · 만든사람 : 삼브</div>
-      <div style="display:flex; gap:5px; margin-top:4px;">
+      <div style="font-size:8.5px; opacity:0.55; letter-spacing:0.3px;">v1.01 · 만든사람 : 삼브</div>
+      <div style="display:flex; gap:5px; margin-top:4px; flex-wrap:wrap; justify-content:center;">
         <button id="tdTutorialBtn" style="padding:5px 10px; font-size:9.5px; font-weight:600; border-radius:7px; border:1px solid rgba(41,182,198,0.5); background:rgba(41,182,198,0.12); color:#8FD8E8;">📘 튜토리얼</button>
         <button id="tdWikiBtn" style="padding:5px 10px; font-size:9.5px; font-weight:600; border-radius:7px; border:1px solid rgba(240,185,11,0.5); background:rgba(240,185,11,0.12); color:#F0D08F;">📖 도감</button>
+        <button id="tdPatchNotesBtn" style="padding:5px 10px; font-size:9.5px; font-weight:600; border-radius:7px; border:1px solid rgba(143,209,106,0.5); background:rgba(143,209,106,0.12); color:#B7E8A0;">📝 패치노트</button>
       </div>
       <div style="font-size:9.5px; opacity:0.85;">시작하면 <b style="color:#29B6C6;">5초</b>의 배치 준비 시간이 주어집니다</div>
       <div id="tdLevelInfo" style="font-size:9.5px; opacity:0.85; margin-top:2px;">Lv1 · 0/100 XP</div>
@@ -191,6 +192,34 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       <div id="tdWikiList" style="display:flex; flex-direction:column; gap:6px; width:100%; max-width:340px; margin-top:2px;"></div>
       <button id="tdWikiCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
     </div>
+    <div id="tdPatchNotesOverlay" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; background:rgba(0,0,0,0.88); border-radius:var(--radius); color:#fff; padding:12px 10px; text-align:center; overflow-y:auto;">
+      <div style="font-size:14px; font-weight:700;">📝 패치노트</div>
+      <div style="display:flex; flex-direction:column; gap:10px; width:100%; max-width:360px; margin-top:2px; text-align:left; font-size:10.5px; line-height:1.55;">
+        <div>
+          <div style="font-weight:700; color:#8FD16A; margin-bottom:3px;">🆕 신규 기능</div>
+          <div>· 온라인 대전(연결 끊김 10초 재접속, 최대 4인 서바이벌), CPU 랭크 대전(레이팅제)</div>
+          <div>· 타이틀로 나가기, 확대(1.0/1.5/2.0x), 일괄 업그레이드, 오토플레이 모드</div>
+          <div>· 신규 타워: 광전사(킬 누적 강화), 럭키 설치(0.5% 확률 Lv.5 즉시 획득)</div>
+          <div>· 타워 시너지: 중독 상태 데미지+15%, 냉기+번개 연쇄사거리↑, 번개가 독 지속시간 연장</div>
+          <div>· 배경음악 8곡 순환, 타워 건설/업그레이드/철거 이펙트</div>
+          <div>· 경로가 매 판 무작위로 바뀜 (여러 패턴 중 선택)</div>
+        </div>
+        <div>
+          <div style="font-weight:700; color:#5AC8FA; margin-bottom:3px;">⚖️ 밸런스</div>
+          <div>· 몬스터 체력/보상 성장 곡선 재조정 (초반은 완만하게, 후반은 유지)</div>
+          <div>· 블랙홀 흡입력 대폭 하향 + 중첩 제한 + 보스 저항</div>
+          <div>· 타워별 DPS-가격 비율 전체 재조정, 초신성 스플래시 범위 하향</div>
+          <div>· 업그레이드/합성 사거리 증가 제거 (맵이 길어짐에 따른 조정)</div>
+        </div>
+        <div>
+          <div style="font-weight:700; color:#FF9F1C; margin-bottom:3px;">🐛 버그 수정 · 최적화</div>
+          <div>· 몬스터 다수 등장 시 데미지 텍스트/그래픽 디테일 자동 간소화로 저사양 기기 렉 완화</div>
+          <div>· 계정별 XP/레벨 표기 오류, CPU 대전 후 메뉴 소실 버그 등 다수 수정</div>
+          <div>· 모바일 화면 배치/Safe Area 대응 개선</div>
+        </div>
+      </div>
+      <button id="tdPatchNotesCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
+    </div>
     <div id="tdOverlay" style="position:absolute; inset:0; display:none; align-items:center; justify-content:flex-start; flex-direction:column; gap:8px; background:rgba(0,0,0,0.6); border-radius:var(--radius); color:#fff; text-align:center; padding:16px 10px; overflow-y:auto;">
       <div style="font-size:16px; font-weight:500; margin-top:6px;" id="tdOverlayTitle">게임 오버</div>
       <div style="font-size:11px; line-height:1.6;" id="tdOverlaySub">도달한 웨이브: 0</div>
@@ -224,9 +253,15 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
     </div>
     <div id="tdFusionOverlay" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; background:rgba(0,0,0,0.85); border-radius:var(--radius); color:#fff; padding:14px 12px; text-align:center; overflow-y:auto;">
       <div style="font-size:14px; font-weight:600;">타워 합성</div>
-      <div style="font-size:10.5px; opacity:0.8; max-width:320px; line-height:1.5;">같은 타워, 같은 등급을 <b style="color:#F0B90B;">3개</b> 모으면 <b style="color:#F0B90B;">1개(공격력 +20%, 사거리 +6%)</b>로 합쳐집니다. <b style="color:#F0B90B;">F5 등급부터는 공격속도도 추가로 빨라집니다.</b> 아래 목록에서 바로 합성할 수 있어요.</div>
+      <div style="font-size:10.5px; opacity:0.8; max-width:320px; line-height:1.5;">같은 타워, 같은 등급을 <b style="color:#F0B90B;">3개</b> 모으면 <b style="color:#F0B90B;">1개(공격력 +20%)</b>로 합쳐집니다. <b style="color:#F0B90B;">F5 등급부터는 공격속도도 추가로 빨라집니다.</b> 아래 목록에서 바로 합성할 수 있어요.</div>
       <div id="tdFusionList" style="display:flex; flex-direction:column; gap:6px; width:100%; max-width:340px; margin-top:4px;"></div>
       <button id="tdFusionCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
+    </div>
+    <div id="tdUpgradeAllOverlay" style="position:absolute; top:6px; left:6px; right:6px; bottom:auto; max-height:78%; display:none; flex-direction:column; gap:6px; background:rgba(10,12,18,0.9); border-radius:12px; border:1px solid rgba(240,185,11,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.5); color:#fff; padding:12px 10px; text-align:center; overflow-y:auto; z-index:16;">
+      <div style="font-size:13px; font-weight:700;">타워 일괄 업그레이드</div>
+      <div style="font-size:9.5px; opacity:0.75; line-height:1.4;">같은 종류 · 같은 레벨끼리 묶어서 한 그룹씩 한 번에 업그레이드합니다</div>
+      <div id="tdUpgradeAllList" style="display:flex; flex-direction:column; gap:6px; margin-top:2px;"></div>
+      <button id="tdUpgradeAllCloseBtn" style="margin-top:4px; padding:8px 16px;">닫기</button>
     </div>
     <div id="tdExitConfirm" style="position:absolute; top:0; left:0; right:0; bottom:0; display:none; align-items:center; justify-content:center; z-index:20; pointer-events:none;">
       <div style="pointer-events:auto; background:rgba(15,18,26,0.92); border:1px solid rgba(233,69,96,0.5); border-radius:12px; padding:16px 18px; max-width:260px; text-align:center; color:#fff; box-shadow:0 10px 30px rgba(0,0,0,0.55);">
@@ -251,6 +286,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
     <button id="tdPauseBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdPauseIcon"></span><span class="tdCtrlLabel">일시정지</span></button>
     <button id="tdZoomBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdZoomIcon"></span><span class="tdCtrlLabel">확대 1.0x</span></button>
     <button id="tdFusionBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdFusionIcon"></span><span class="tdCtrlLabel">타워 합성</span></button>
+    <button id="tdUpgradeAllBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdUpgradeAllIcon"></span><span class="tdCtrlLabel">일괄 업그레이드</span></button>
     <button id="tdLabBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdLabIcon"></span><span class="tdCtrlLabel">연구소</span></button>
     <button id="tdMusicBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdMusicIcon"></span><span class="tdCtrlLabel">배경음악 끄기</span></button>
     <button id="tdSfxBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdSfxIcon"></span><span class="tdCtrlLabel">효과음 끄기</span></button>
@@ -267,7 +303,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
     <button id="tdKillDisplayBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdKillDisplayIcon"></span><span class="tdCtrlLabel">타워 킬수 표시</span></button>
     <button id="tdPassiveBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdPassiveIcon"></span><span class="tdCtrlLabel">보유 패시브</span></button>
     <button id="tdRankBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdRankIcon"></span><span class="tdCtrlLabel">온라인 랭킹</span></button>
-    <button id="tdBossFocusBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdBossFocusIcon"></span><span class="tdCtrlLabel">보스 점사</span></button>
+    <button id="tdAutoPlayBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdAutoPlayIcon"></span><span class="tdCtrlLabel">오토플레이 OFF</span></button>
     <button id="tdExitBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdExitIcon"></span><span class="tdCtrlLabel">타이틀로</span></button>
   </div>
 
@@ -363,12 +399,14 @@ var ICONS={
   passive:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>',
   trophy:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5H4a3 3 0 0 0 3 5M16 5h4a3 3 0 0 1-3 5"/><path d="M12 13v3M9 20h6M10 17h4v3h-4z"/></svg>',
   zoom:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>',
-  exit:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'
+  exit:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+  bot:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.3" fill="currentColor" stroke="none"/><path d="M12 8V4M9 4h6"/></svg>'
 };
 function initIcons(){
   document.getElementById('tdSpeedIcon').innerHTML=ICONS.speed;
   document.getElementById('tdPauseIcon').innerHTML=ICONS.pause;
   document.getElementById('tdFusionIcon').innerHTML=ICONS.fusion;
+  document.getElementById('tdUpgradeAllIcon').innerHTML=ICONS.upgrade;
   document.getElementById('tdLabIcon').innerHTML=ICONS.lab;
   document.getElementById('tdMusicIcon').innerHTML=ICONS.musicOn;
   document.getElementById('tdSfxIcon').innerHTML=ICONS.soundOn;
@@ -377,26 +415,26 @@ function initIcons(){
   document.getElementById('tdKillDisplayIcon').innerHTML=ICONS.kills;
   document.getElementById('tdPassiveIcon').innerHTML=ICONS.passive;
   document.getElementById('tdRankIcon').innerHTML=ICONS.trophy;
-  document.getElementById('tdBossFocusIcon').innerHTML=ICONS.target;
   document.getElementById('tdZoomIcon').innerHTML=ICONS.zoom;
   document.getElementById('tdExitIcon').innerHTML=ICONS.exit;
+  document.getElementById('tdAutoPlayIcon').innerHTML=ICONS.bot;
   document.getElementById('tdTitleIcon').innerHTML='<svg viewBox="0 0 64 64" width="52" height="52"><defs><linearGradient id="tdTitleGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F0B90B"/><stop offset="100%" stop-color="#E24B4A"/></linearGradient></defs><polygon points="32,4 40,20 24,20" fill="url(#tdTitleGrad)"/><rect x="27" y="18" width="10" height="16" rx="2" fill="url(#tdTitleGrad)"/><circle cx="32" cy="42" r="18" fill="none" stroke="url(#tdTitleGrad)" stroke-width="3.5"/><circle cx="32" cy="42" r="6" fill="url(#tdTitleGrad)"/></svg>';
 }
 
 var THEME_VARS={
   dark:{
-    '--surface-1':'#1b212b', '--surface-2':'#242b37', '--text-primary':'#eef1f6',
-    '--text-secondary':'#9aa7b8', '--border':'#333c4a', '--border-strong':'#4a5566',
+    '--surface-1':'#262f3d', '--surface-2':'#333f52', '--text-primary':'#eef1f6',
+    '--text-secondary':'#9aa7b8', '--border':'#4c5b73', '--border-strong':'#6c7e9c',
     '--border-accent':'#6f9bff', '--shadow-popover':'0 10px 26px rgba(0,0,0,0.55)'
   },
   light:{
-    '--surface-1':'#f1efe8', '--surface-2':'#ffffff', '--text-primary':'#1c1f26',
-    '--text-secondary':'#6b7280', '--border':'#00000022', '--border-strong':'#00000044',
+    '--surface-1':'#e6e2d4', '--surface-2':'#ffffff', '--text-primary':'#1c1f26',
+    '--text-secondary':'#6b7280', '--border':'#00000044', '--border-strong':'#00000066',
     '--border-accent':'#3d6bff', '--shadow-popover':'0 8px 20px rgba(0,0,0,0.25)'
   }
 };
 var CANVAS_THEME={
-  dark:{ board:'#242b37', boardAlt:'#1b212b', border:'#333c4a', path:'#1f5f4c', path2Dormant:'#3a3f47', arrow:'rgba(210,230,220,0.35)' },
+  dark:{ board:'#2a3242', boardAlt:'#1b212b', border:'#4c5b73', path:'#1f5f4c', path2Dormant:'#3a3f47', arrow:'rgba(210,230,220,0.35)' },
   light:{ board:'#ffffff', boardAlt:'#f1efe8', border:'#00000022', path:'#9FE1CB', path2Dormant:'#C9C6BA', arrow:'rgba(15,110,86,0.35)' }
 };
 var darkMode=true;
@@ -448,7 +486,7 @@ function canPlaySfx(key,minGap){
   sfxLast[key]=now;
   return true;
 }
-function playTone(freq,dur,type,vol,delay,bus){
+function playTone(freq,dur,type,vol,delay,bus,filterFreq){
   if(!audioCtx) return;
   var target = bus==='music'? musicGain : sfxGain;
   if(!target) return;
@@ -461,7 +499,13 @@ function playTone(freq,dur,type,vol,delay,bus){
     gain.gain.setValueAtTime(0,t0);
     gain.gain.linearRampToValueAtTime((vol||0.15)*SFX_GAIN_MULT,t0+0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
-    osc.connect(gain); gain.connect(target);
+    if(filterFreq){
+      var filt=audioCtx.createBiquadFilter();
+      filt.type='lowpass'; filt.frequency.value=filterFreq; filt.Q.value=0.6;
+      osc.connect(filt); filt.connect(gain); gain.connect(target);
+    } else {
+      osc.connect(gain); gain.connect(target);
+    }
     osc.start(t0); osc.stop(t0+dur+0.03);
   }catch(e){}
 }
@@ -531,128 +575,197 @@ function playHat(delay,vol){
   }catch(e){}
 }
 
-var MUSIC_BPM=148;
-var beatDur=60/MUSIC_BPM;
-var barLen=beatDur*8;
-
 var SONGS=[
-  { // Song A - bright major pop
+  { // Song A - 파워 신스팝 (질주감 있는 리드, C-G-Am-F)
+    bpm:160,
+    melodyWave:'sawtooth', melodyFilter:2400, bassWave:'sine', chordWave:'triangle', chordFilter:1800,
     melody:[
-      [0,523.25,0.16],[0.5,659.25,0.13],[1,783.99,0.16],[1.5,659.25,0.13],
-      [2,523.25,0.16],[2.5,659.25,0.13],[3,987.77,0.2],[3.5,880.0,0.13],
-      [4,523.25,0.16],[4.5,659.25,0.13],[5,783.99,0.16],[5.5,987.77,0.13],
-      [6,1046.5,0.18],[6.5,880.0,0.13],[7,783.99,0.16],[7.5,659.25,0.13]
+      [0,523.25,0.28],[1,587.33,0.22],[2,659.25,0.28],[3.5,587.33,0.22],
+      [4,523.25,0.28],[5,440.0,0.22],[6,493.88,0.28],[7,523.25,0.32]
     ],
     bass:[
-      [0,130.81,0.28],[1,130.81,0.18],[2,164.81,0.28],[3,196.0,0.18],
-      [4,130.81,0.28],[5,130.81,0.18],[6,146.83,0.28],[7,164.81,0.22]
+      [0,130.81,0.42],[1,130.81,0.24],[2,196.00,0.42],[3,196.00,0.24],
+      [4,220.00,0.42],[5,220.00,0.24],[6,174.61,0.42],[7,174.61,0.24]
+    ],
+    chords:[
+      [0,[261.63,329.63,392.00],1.9],
+      [2,[196.00,246.94,293.66],1.9],
+      [4,[220.00,261.63,329.63],1.9],
+      [6,[174.61,220.00,261.63],1.9]
     ],
     hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
   },
-  { // Song B - minor/darker
+  { // Song B - 신스웨이브 드라이브 (밤거리를 달리는 필터 리드, Am-F-C-G)
+    bpm:166,
+    melodyWave:'sawtooth', melodyFilter:2000, bassWave:'sawtooth', bassFilter:900, chordWave:'triangle', chordFilter:1400,
     melody:[
-      [0,440,0.16],[0.5,523.25,0.13],[1,587.33,0.16],[1.5,523.25,0.13],
-      [2,440,0.16],[2.5,523.25,0.13],[3,659.25,0.2],[3.5,587.33,0.13],
-      [4,440,0.16],[4.5,523.25,0.13],[5,587.33,0.16],[5.5,659.25,0.13],
-      [6,698.46,0.18],[6.5,587.33,0.13],[7,523.25,0.16],[7.5,440,0.13]
+      [0,440.0,0.3],[0.75,523.25,0.22],[1.5,493.88,0.3],[2.25,440.0,0.22],
+      [3,392.0,0.3],[4,440.0,0.22],[4.75,523.25,0.3],[5.5,587.33,0.22],
+      [6,523.25,0.3],[7,466.16,0.32]
     ],
     bass:[
-      [0,110,0.28],[1,110,0.18],[2,130.81,0.28],[3,146.83,0.18],
-      [4,110,0.28],[5,110,0.18],[6,116.54,0.28],[7,130.81,0.22]
+      [0,110.00,0.4],[1,110.00,0.24],[2,87.31,0.4],[3,87.31,0.24],
+      [4,130.81,0.4],[5,130.81,0.24],[6,98.00,0.4],[7,98.00,0.24]
+    ],
+    chords:[
+      [0,[220.00,261.63,329.63],1.9],
+      [2,[174.61,220.00,261.63],1.9],
+      [4,[130.81,164.81,196.00],1.9],
+      [6,[196.00,246.94,293.66],1.9]
+    ],
+    hat:[0.5,1,1.5,2.5,3,3.5,4.5,5,5.5,6.5,7,7.5]
+  },
+  { // Song C - 칩튠 스프린트 (경쾌한 8비트풍, F-C-G-Am)
+    bpm:170,
+    melodyWave:'square', melodyFilter:0, bassWave:'square', chordWave:'triangle', chordFilter:1900,
+    melody:[
+      [0,349.23,0.18],[0.5,440.0,0.15],[1,523.25,0.18],[1.5,440.0,0.15],
+      [2,523.25,0.18],[2.5,587.33,0.15],[3,659.25,0.22],[3.5,587.33,0.15],
+      [4,392.0,0.18],[4.5,493.88,0.15],[5,587.33,0.18],[5.5,493.88,0.15],
+      [6,440.0,0.18],[6.5,523.25,0.15],[7,587.33,0.22],[7.5,493.88,0.15]
+    ],
+    bass:[
+      [0,174.61,0.3],[1,174.61,0.18],[2,130.81,0.3],[3,130.81,0.18],
+      [4,196.00,0.3],[5,196.00,0.18],[6,220.00,0.3],[7,220.00,0.18]
+    ],
+    chords:[
+      [0,[174.61,220.00,261.63],1.7],
+      [2,[130.81,164.81,196.00],1.7],
+      [4,[196.00,246.94,293.66],1.7],
+      [6,[220.00,261.63,329.63],1.7]
     ],
     hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
   },
-  { // Song C - fast arpeggio
+  { // Song D - 트랜스 펄스 (몰아치는 옥타브 베이스, Cm-Ab-Eb-Bb)
+    bpm:150,
+    melodyWave:'sine', bassWave:'sawtooth', bassFilter:700, chordWave:'triangle', chordFilter:1600,
     melody:[
-      [0,523.25,0.1],[0.25,659.25,0.1],[0.5,783.99,0.1],[0.75,659.25,0.1],
-      [1,523.25,0.1],[1.25,659.25,0.1],[1.5,783.99,0.1],[1.75,987.77,0.1],
-      [2,880,0.1],[2.25,783.99,0.1],[2.5,659.25,0.1],[2.75,523.25,0.1],
-      [3,587.33,0.14],[3.5,698.46,0.14],
-      [4,523.25,0.1],[4.25,659.25,0.1],[4.5,783.99,0.1],[4.75,659.25,0.1],
-      [5,523.25,0.1],[5.25,659.25,0.1],[5.5,783.99,0.1],[5.75,987.77,0.1],
-      [6,1046.5,0.14],[6.5,880,0.14],
-      [7,783.99,0.12],[7.5,659.25,0.12]
+      [0,523.25,0.3],[1,622.25,0.24],[2,698.46,0.3],[3,622.25,0.24],
+      [4,554.37,0.3],[5,466.16,0.24],[6,523.25,0.3],[7,622.25,0.28]
     ],
     bass:[
-      [0,130.81,0.2],[0.5,130.81,0.12],[1,130.81,0.2],[1.5,130.81,0.12],
-      [2,164.81,0.2],[2.5,164.81,0.12],[3,196,0.2],[3.5,196,0.12],
-      [4,130.81,0.2],[4.5,130.81,0.12],[5,130.81,0.2],[5.5,130.81,0.12],
-      [6,146.83,0.2],[6.5,146.83,0.12],[7,164.81,0.2],[7.5,164.81,0.12]
+      [0,130.81,0.24],[0.5,130.81,0.2],[1,130.81,0.24],[1.5,130.81,0.2],
+      [2,207.65,0.24],[2.5,207.65,0.2],[3,207.65,0.24],[3.5,207.65,0.2],
+      [4,155.56,0.24],[4.5,155.56,0.2],[5,155.56,0.24],[5.5,155.56,0.2],
+      [6,233.08,0.24],[6.5,233.08,0.2],[7,233.08,0.24],[7.5,233.08,0.2]
     ],
-    hat:[0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25,5.75,6.25,6.75,7.25,7.75]
-  },
-  { // Song D - sparse syncopated groove
-    melody:[
-      [0.5,659.25,0.2],[1.5,587.33,0.16],[2.5,783.99,0.2],[3.75,659.25,0.14],
-      [4.5,659.25,0.2],[5.5,587.33,0.16],[6.5,880,0.2],[7.75,659.25,0.14]
-    ],
-    bass:[
-      [0,130.81,0.22],[0.75,130.81,0.14],[1.5,164.81,0.22],[2.25,130.81,0.14],
-      [3,146.83,0.22],[3.75,130.81,0.14],[4,130.81,0.22],[4.75,130.81,0.14],
-      [5.5,164.81,0.22],[6.25,130.81,0.14],[7,196,0.22],[7.75,164.81,0.14]
-    ],
-    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
-  },
-  { // Song E - 잔잔한 앰비언트 (마이너 펜타토닉, 여백 많음)
-    melody:[
-      [0,440,0.4],[1.5,523.25,0.3],[3,392,0.35],[4.5,440,0.3],[6,587.33,0.35],[7,523.25,0.3]
-    ],
-    bass:[
-      [0,110,0.5],[2,110,0.3],[4,110,0.5],[6,130.81,0.4]
-    ],
-    hat:[2,6]
-  },
-  { // Song F - 질주감 있는 에너지틱 그루브
-    melody:[
-      [0,659.25,0.12],[0.5,783.99,0.1],[1,659.25,0.12],[1.5,587.33,0.1],
-      [2,659.25,0.12],[2.5,783.99,0.1],[3,880,0.14],[3.5,783.99,0.1],
-      [4,659.25,0.12],[4.5,783.99,0.1],[5,659.25,0.12],[5.5,587.33,0.1],
-      [6,880,0.16],[6.5,987.77,0.14],[7,880,0.12],[7.5,783.99,0.1]
-    ],
-    bass:[
-      [0,164.81,0.18],[0.5,164.81,0.12],[1,164.81,0.18],[1.5,164.81,0.12],
-      [2,196,0.18],[2.5,196,0.12],[3,220,0.18],[3.5,220,0.12],
-      [4,164.81,0.18],[4.5,164.81,0.12],[5,164.81,0.18],[5.5,164.81,0.12],
-      [6,174.61,0.18],[6.5,174.61,0.12],[7,196,0.18],[7.5,196,0.12]
-    ],
-    hat:[0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25,5.75,6.25,6.75,7.25,7.75]
-  },
-  { // Song G - 통통 튀는 스타카토 멜로디
-    melody:[
-      [0,783.99,0.08],[0.25,659.25,0.08],[0.5,783.99,0.08],[0.75,987.77,0.08],
-      [1,880,0.1],[1.5,783.99,0.08],[2,659.25,0.08],[2.25,783.99,0.08],
-      [2.5,880,0.08],[2.75,1046.5,0.08],[3,987.77,0.12],
-      [4,783.99,0.08],[4.25,659.25,0.08],[4.5,783.99,0.08],[4.75,987.77,0.08],
-      [5,880,0.1],[5.5,783.99,0.08],[6,659.25,0.08],[6.25,783.99,0.08],
-      [6.5,880,0.08],[6.75,1046.5,0.08],[7,1174.66,0.14]
-    ],
-    bass:[
-      [0,196,0.2],[1,196,0.14],[2,220,0.2],[3,246.94,0.14],
-      [4,196,0.2],[5,196,0.14],[6,220,0.2],[7,246.94,0.16]
-    ],
-    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
-  },
-  { // Song H - 긴장감 있는 마이너 무드
-    melody:[
-      [0,349.23,0.3],[1,415.30,0.25],[2,349.23,0.3],[3,392,0.25],
-      [4,349.23,0.3],[5,415.30,0.25],[6,466.16,0.3],[7,392,0.3]
-    ],
-    bass:[
-      [0,87.31,0.35],[2,92.5,0.3],[4,87.31,0.35],[6,98,0.3]
+    chords:[
+      [0,[261.63,311.13,392.00],1.9],
+      [2,[207.65,261.63,311.13],1.9],
+      [4,[155.56,196.00,233.08],1.9],
+      [6,[233.08,293.66,349.23],1.9]
     ],
     hat:[1,3,5,7]
+  },
+  { // Song E - 락 리프 (드라이브감 있는 파워코드, Em-C-G-D)
+    bpm:162,
+    melodyWave:'sawtooth', melodyFilter:2600, bassWave:'square', chordWave:'sawtooth', chordFilter:1200,
+    melody:[
+      [0,659.25,0.22],[0.5,659.25,0.18],[1,587.33,0.22],[1.5,659.25,0.18],
+      [2,523.25,0.22],[2.5,523.25,0.18],[3,493.88,0.22],[3.5,523.25,0.18],
+      [4,392.0,0.22],[4.5,392.0,0.18],[5,440.0,0.22],[5.5,493.88,0.18],
+      [6,587.33,0.22],[6.5,587.33,0.18],[7,523.25,0.26]
+    ],
+    bass:[
+      [0,164.81,0.24],[0.5,164.81,0.18],[1,164.81,0.24],[1.5,164.81,0.18],
+      [2,130.81,0.24],[2.5,130.81,0.18],[3,130.81,0.24],[3.5,130.81,0.18],
+      [4,196.00,0.24],[4.5,196.00,0.18],[5,196.00,0.24],[5.5,196.00,0.18],
+      [6,146.83,0.24],[6.5,146.83,0.18],[7,146.83,0.24],[7.5,146.83,0.18]
+    ],
+    chords:[
+      [0,[164.81,196.00,246.94],1.7],
+      [2,[130.81,164.81,196.00],1.7],
+      [4,[196.00,246.94,293.66],1.7],
+      [6,[146.83,185.00,220.00],1.7]
+    ],
+    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
+  },
+  { // Song F - 펑키 그루브 (당김음이 강한 신스 베이스, Dm-G-C-Am)
+    bpm:155,
+    melodyWave:'triangle', bassWave:'sawtooth', bassFilter:1100, chordWave:'triangle', chordFilter:1500,
+    melody:[
+      [0.5,587.33,0.2],[1,523.25,0.16],[2,440.0,0.2],[2.75,493.88,0.16],
+      [3.5,587.33,0.2],[4.5,659.25,0.2],[5,587.33,0.16],[6,523.25,0.2],
+      [6.75,587.33,0.16],[7.5,440.0,0.22]
+    ],
+    bass:[
+      [0,146.83,0.2],[0.75,146.83,0.16],[1.5,146.83,0.2],[2,196.00,0.2],
+      [2.75,196.00,0.16],[3.5,196.00,0.2],[4,130.81,0.2],[4.75,130.81,0.16],
+      [5.5,130.81,0.2],[6,220.00,0.2],[6.75,220.00,0.16],[7.5,220.00,0.2]
+    ],
+    chords:[
+      [0,[146.83,174.61,220.00],1.7],
+      [2,[196.00,246.94,293.66],1.7],
+      [4,[130.81,164.81,196.00],1.7],
+      [6,[220.00,261.63,329.63],1.7]
+    ],
+    hat:[1,2.5,4,5.5,7]
+  },
+  { // Song G - EDM 빌드업 (상승하는 아르페지오, F-G-Am-Am)
+    bpm:168,
+    melodyWave:'sawtooth', melodyFilter:3000, bassWave:'sine', chordWave:'sawtooth', chordFilter:1000,
+    melody:[
+      [0,349.23,0.16],[0.25,440.0,0.14],[0.5,523.25,0.16],[0.75,440.0,0.14],
+      [1,392.0,0.16],[1.25,493.88,0.14],[1.5,587.33,0.16],[1.75,493.88,0.14],
+      [2,440.0,0.16],[2.25,523.25,0.14],[2.5,659.25,0.16],[2.75,523.25,0.14],
+      [3,440.0,0.2],[3.5,523.25,0.2],[4,349.23,0.16],[4.25,440.0,0.14],
+      [4.5,523.25,0.16],[4.75,440.0,0.14],[5,392.0,0.16],[5.25,493.88,0.14],
+      [5.5,587.33,0.16],[5.75,493.88,0.14],[6,440.0,0.16],[6.25,523.25,0.14],
+      [6.5,659.25,0.16],[6.75,523.25,0.14],[7,440.0,0.22],[7.5,523.25,0.26]
+    ],
+    bass:[
+      [0,174.61,0.4],[2,196.00,0.4],[4,220.00,0.4],[6,220.00,0.4]
+    ],
+    chords:[
+      [0,[174.61,220.00,261.63],1.9],
+      [2,[196.00,246.94,293.66],1.9],
+      [4,[220.00,261.63,329.63],1.9],
+      [6,[220.00,261.63,329.63],1.9]
+    ],
+    hat:[0.5,1,1.5,2,2.5,3,3.5,4.5,5,5.5,6,6.5,7,7.5]
+  },
+  { // Song H - 레트로 아케이드 (통통 튀는 리듬, C-Am-F-G)
+    bpm:152,
+    melodyWave:'square', bassWave:'triangle', chordWave:'triangle', chordFilter:1700,
+    melody:[
+      [0,523.25,0.24],[1,659.25,0.2],[1.5,587.33,0.18],[2,440.0,0.24],
+      [3,523.25,0.2],[3.5,493.88,0.18],[4,349.23,0.24],[5,440.0,0.2],
+      [5.5,392.0,0.18],[6,392.0,0.24],[7,493.88,0.2],[7.5,440.0,0.24]
+    ],
+    bass:[
+      [0,130.81,0.36],[2,220.00,0.36],[4,174.61,0.36],[6,196.00,0.36]
+    ],
+    chords:[
+      [0,[261.63,329.63,392.00],1.7],
+      [2,[220.00,261.63,329.63],1.7],
+      [4,[174.61,220.00,261.63],1.7],
+      [6,[196.00,246.94,293.66],1.7]
+    ],
+    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
   }
 ];
+
 var BARS_PER_SONG=6;
 var songIndex=0, barCount=0;
 function scheduleBar(){
   if(!audioCtx) return;
   var song=SONGS[songIndex];
-  song.melody.forEach(function(n){ playTone(n[1],n[2],'square',0.05,n[0]*beatDur,'music'); });
-  song.bass.forEach(function(n){ playTone(n[1],n[2],'triangle',0.075,n[0]*beatDur,'music'); });
+  var beatDur=60/(song.bpm||160);
+  var mWave=song.melodyWave||'triangle', mFilt=song.melodyFilter||0;
+  var bWave=song.bassWave||'sine', bFilt=song.bassFilter||0;
+  var cWave=song.chordWave||'triangle', cFilt=song.chordFilter||2200;
+  song.melody.forEach(function(n){ playTone(n[1],n[2],mWave,0.055,n[0]*beatDur,'music',mFilt); });
+  song.bass.forEach(function(n){ playTone(n[1],n[2],bWave,0.085,n[0]*beatDur,'music',bFilt); });
+  if(song.chords){
+    song.chords.forEach(function(c){
+      c[1].forEach(function(f){ playTone(f,c[2],cWave,0.026,c[0]*beatDur,'music',cFilt); });
+    });
+  }
   song.hat.forEach(function(t){ playHat(t*beatDur,0.045); });
   barCount++;
   if(barCount>=BARS_PER_SONG){ barCount=0; songIndex=(songIndex+1)%SONGS.length; }
+  var barLen=beatDur*8;
+  musicTimer=setTimeout(scheduleBar, barLen*1000);
 }
 var musicTimer=null;
 function startMusic(){
@@ -660,29 +773,29 @@ function startMusic(){
   if(!audioCtx) return;
   songIndex=0; barCount=0;
   scheduleBar();
-  musicTimer=setInterval(scheduleBar, barLen*1000);
 }
 function stopMusic(){
-  if(musicTimer){ clearInterval(musicTimer); musicTimer=null; }
+  if(musicTimer){ clearTimeout(musicTimer); musicTimer=null; }
 }
 
-var ORDER=['basic','sniper','gatling','missile','explosive','frost','piercer','berserker','lightning','poison','obelisk','laser','plasma','blackhole','nova'];
+var ORDER=['basic','sniper','gatling','missile','explosive','frost','berserker','piercer','pierceSniper','lightning','commander','poison','laser','plasma','blackhole','nova'];
 var TOWER_DEFS={
   basic:{name:'기본', cost:100, dmg:14, range:95, rate:500, color:'#378ADD', dark:'#185FA5'},
   sniper:{name:'저격', cost:250, dmg:38, range:180, rate:650, canBoth:true, color:'#6C4FD1', dark:'#3D2A8C'},
   gatling:{name:'기관총', cost:500, dmg:18, range:145, rate:100, color:'#8A8F98', dark:'#4A4F57'},
   missile:{name:'미사일터렛', cost:650, dmg:66, range:120, rate:600, splash:40, airOnly:true, color:'#3ADE8F', dark:'#1B6B44'},
   explosive:{name:'폭발', cost:1200, dmg:80, range:100, rate:750, splash:70, color:'#E0672B', dark:'#93401A'},
-  frost:{name:'냉기', cost:2000, dmg:30, range:105, rate:450, slow:0.5, slowDur:1700, color:'#29B6C6', dark:'#146B75'},
-  piercer:{name:'관통포', cost:3000, dmg:56, range:110, rate:500, armorPierce:true, color:'#C9A227', dark:'#6E5610'},
+  frost:{name:'냉기', cost:2000, dmg:44, range:105, rate:450, slow:0.5, slowDur:1700, color:'#29B6C6', dark:'#146B75'},
   berserker:{name:'광전사', cost:2800, dmg:22, range:100, rate:480, berserker:true, unlockWave:15, color:'#B8232F', dark:'#4A0D12'},
-  lightning:{name:'번개', cost:4000, dmg:62, range:115, rate:580, chain:5, chainRange:95, falloff:0.75, color:'#F0B90B', dark:'#8C6E05'},
-  poison:{name:'독', cost:8000, dmg:48, range:100, rate:600, poisonDps:85, poisonDur:3500, color:'#5FA83D', dark:'#34611F'},
-  obelisk:{name:'오벨리스크', cost:6500, dmg:8, range:130, rate:1300, obelisk:true, obeliskCooldownMs:50000, obeliskStunMs:3000, unlockWave:20, color:'#9B59B6', dark:'#3F2251'},
+  piercer:{name:'관통포', cost:3000, dmg:56, range:110, rate:500, armorPierce:true, color:'#C9A227', dark:'#6E5610'},
+  pierceSniper:{name:'관통저격수', cost:3500, dmg:95, range:170, rate:650, canBoth:true, pierceLimit:2, unlockWave:8, color:'#4FA8D8', dark:'#215A78'},
+  lightning:{name:'번개', cost:4000, dmg:80, range:115, rate:580, chain:5, chainRange:95, falloff:0.75, color:'#F0B90B', dark:'#8C6E05'},
+  commander:{name:'지휘관', cost:5000, dmg:0, range:110, rate:99999, aura:true, auraAtkSpeedBonus:0.22, unlockWave:12, color:'#3D9970', dark:'#1F4D3A'},
+  poison:{name:'독', cost:8000, dmg:55, range:100, rate:600, poisonDps:140, poisonDur:3500, color:'#5FA83D', dark:'#34611F'},
   laser:{name:'레이저', cost:15000, dmg:80, range:175, rate:430, pierce:true, color:'#E24B4A', dark:'#8C1F1F'},
   plasma:{name:'플라즈마', cost:30000, dmg:200, range:125, rate:900, splash:100, color:'#D1479B', dark:'#832C61'},
-  blackhole:{name:'블랙홀', cost:50000, dmg:50, range:135, rate:350, pullStrength:35, color:'#4A2E7A', dark:'#1C1230'},
-  nova:{name:'초신성', cost:120000, dmg:700, range:150, rate:1100, splash:140, unlockWave:50, color:'#FF3864', dark:'#7A0F27'}
+  blackhole:{name:'블랙홀', cost:50000, dmg:90, range:135, rate:350, pullStrength:35, color:'#4A2E7A', dark:'#1C1230'},
+  nova:{name:'초신성', cost:150000, dmg:700, range:150, rate:1100, splash:105, unlockWave:50, color:'#FF3864', dark:'#7A0F27'}
 };
 
 function easeOutBack(x){
@@ -713,7 +826,8 @@ var TOWER_VISUALS={
   blackhole:{barrels:0, ring:true},
   nova:{barrels:1, barrelWMult:1.6, barrelLenMult:0.9, tip:'block'},
   berserker:{barrels:1, barrelWMult:0.9, barrelLenMult:1.1, tip:'cone'},
-  obelisk:{barrels:0, ring:true}
+  pierceSniper:{barrels:1, barrelWMult:0.5, barrelLenMult:1.5, tip:'cone'},
+  commander:{barrels:0, ring:true}
 };
 function drawTowerBody(t, R, bw, barrelLen, barrelW){
   var vis=TOWER_VISUALS[t.kind]||{barrels:1, barrelWMult:1, barrelLenMult:1, tip:'circle'};
@@ -738,7 +852,7 @@ function drawTowerBody(t, R, bw, barrelLen, barrelW){
   ctx.beginPath(); ctx.arc(0,0,bw*0.56,0,Math.PI*2);
   ctx.fillStyle=baseGrad; ctx.fill();
   // 본체 (그라데이션 음영)
-  ctx.shadowBlur=8; ctx.shadowColor=t.color;
+  ctx.shadowBlur = G.perfSimpleMode? 0 : 8; ctx.shadowColor=t.color;
   var bodyGrad=ctx.createLinearGradient(-bw/2,-bw/2,bw/2,bw/2);
   bodyGrad.addColorStop(0, lightenColor(t.color,0.4));
   bodyGrad.addColorStop(1, t.color);
@@ -2013,16 +2127,19 @@ function resetGame(forBattle){
   G.money=400+rsrch.startGold*50+skipGold+levelGoldBonus; G.lives=20; G.wave=Math.max(0,skipWave-1);
   G.state='intermission'; G.intermissionTimer=5000;
   G.spawnGap=600; G.remainingToSpawn=0; G.spawnTimer=0; G.bossQueued=false; G.miniBossQueued=false;
-  G.crateWave=0; G.crateSpawned=false; G.bossFocus=false; G.lastPlacement=null;
-  G.enemies=[]; G.towers={}; G.projectiles=[]; G.particles=[]; G.rings=[]; G.floaters=[]; G.lasers=[]; G.floatersSuppressed=false;
+  G.crateWave=0; G.crateSpawned=false; G.lastPlacement=null;
+  G.enemies=[]; G.towers={}; G.projectiles=[]; G.particles=[]; G.rings=[]; G.floaters=[]; G.lasers=[]; G.floatersSuppressed=false; G.perfSimpleMode=false;
   G.selectedTower=null; G.placeType=null; G.hoverCell=null;
   G.fusionMode=false; G.fusionSelection=[];
   G.speedMult=1; G.paused=true; G.manualPause=false; G.gameOver=false; G.choosing=false;
   G.autoChoice=false; G.showKillCounts=false;
+  G.autoPlayMode=false; G.autoPlayAcc=0; G.autoPlayNextAt=1.8;
+  var apBtn=document.getElementById('tdAutoPlayBtn');
+  if(apBtn){ apBtn.classList.remove('tdActive'); apBtn.querySelector('.tdCtrlLabel').textContent='오토플레이 OFF'; }
   G.shakeTime=0; G.shakeMag=0; G.waveBanner=null; G.timeAcc=0;
   G.critChance=0.08+rsrch.crit*0.01; G.critMult=1.8; G.totalKills=0;
   G.buffAtkSpeed=1; G.buffGold=1; G.buffRange=1; G.buffDiscount=1; G.buffDmg=1; G.specials=[];
-  overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none'; document.getElementById('tdFusionOverlay').style.display='none';
+  overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none'; document.getElementById('tdFusionOverlay').style.display='none'; document.getElementById('tdUpgradeAllOverlay').style.display='none';
   if(typeof _choiceTimerIv!=='undefined' && _choiceTimerIv){ clearInterval(_choiceTimerIv); _choiceTimerIv=null; }
   rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록'; rankSubmitBtn.style.display=''; rankNameInput.disabled=false; rankNameInput.value='';
   towerPopup.style.display='none'; towerPopup.style.opacity='0';
@@ -2035,7 +2152,6 @@ function resetGame(forBattle){
   acWrap.classList.remove('tdSpinBorder');
   acBtn.querySelector('.tdCtrlLabel').textContent='웨이브 자동선택 OFF';
   document.getElementById('tdKillDisplayBtn').classList.remove('tdActive');
-  document.getElementById('tdBossFocusBtn').classList.remove('tdActive');
   updateHUD(); updateSelInfo(); refreshTowerButtonLabels();
 }
 
@@ -2044,13 +2160,26 @@ function berserkerKillBonus(t){
   return Math.min(3.0, (t.kills||0)*0.006); // 킬 1개당 +0.6%, 최대 +300% (500킬)
 }
 function towerDamage(t){ return t.dmg*G.buffDmg*(1+(t.fusionGrade||0)*0.20)*(1+effResearch().dmg*0.03)*(1+berserkerKillBonus(t)); }
-function towerRange(t){ return t.range*G.buffRange*(1+(t.fusionGrade||0)*0.06); }
+function towerRange(t){ return t.range*G.buffRange; }
 function fusionRateMult(t){
   // F5부터 등급당 공격속도 4%씩 추가로 빨라짐 (최대 30%) - 합성을 아는 사람과 모르는 사람의 격차를 벌리는 포인트
   var extraGrades=Math.max(0,(t.fusionGrade||0)-4);
   return Math.max(0.7, 1-extraGrades*0.04);
 }
-function towerRate(t){ return (t.rate/G.buffAtkSpeed)*fusionRateMult(t); }
+// 지휘관류 오라: 사거리 안에 있는 동안에만 실시간으로 재계산됨 (타워에 영구 저장되지 않음)
+// -> 지휘관을 설치 후 무르기(환불)해도 이미 얻은 이득이 남지 않아 어뷰징이 불가능함
+function auraSpeedMult(t){
+  if(t.aura) return 1;
+  var bonus=0;
+  var keys=Object.keys(G.towers);
+  for(var i=0;i<keys.length;i++){
+    var c=G.towers[keys[i]];
+    if(!c.aura || (c.stunTime||0)>0) continue;
+    if(Math.hypot(c.px-t.px, c.py-t.py)<=towerRange(c)) bonus=Math.max(bonus, c.auraAtkSpeedBonus||0);
+  }
+  return 1+bonus;
+}
+function towerRate(t){ return (t.rate/G.buffAtkSpeed)*fusionRateMult(t)/auraSpeedMult(t); }
 function goldMult(){ return G.buffGold*(1+effResearch().goldGain*0.08); }
 
 function waveComposition(wave){
@@ -2275,10 +2404,12 @@ function armorMultFor(en, towerKey){
   var srcTower = towerKey? G.towers[towerKey] : null;
   return (srcTower && srcTower.armorPierce) ? 1.5 : 0.6;
 }
+// 시너지: 중독 상태의 적은 약화되어 모든 공격에 데미지를 15% 더 받음
+function poisonWeaknessMult(en){ return (en && en.poisonTime>0) ? 1.15 : 1; }
 function applyRawDamage(en,dmg,towerKey){
   if(!en||!en.alive) return;
   var shieldMult=(en.shieldTime>0)?0.5:1;
-  var amt=dmg*shieldMult*armorMultFor(en,towerKey);
+  var amt=dmg*shieldMult*armorMultFor(en,towerKey)*poisonWeaknessMult(en);
   en.hp-=amt;
   en.flashTime=50;
   if(towerKey) en.lastHitTowerKey=towerKey;
@@ -2288,7 +2419,7 @@ function dealDamage(en, dmg, towerKey){
   if(!en || !en.alive) return 0;
   var shieldMult=(en.shieldTime>0)?0.5:1;
   var crit = Math.random()<G.critChance;
-  var amount = (crit? dmg*G.critMult : dmg) * shieldMult * armorMultFor(en,towerKey);
+  var amount = (crit? dmg*G.critMult : dmg) * shieldMult * armorMultFor(en,towerKey) * poisonWeaknessMult(en);
   en.hp-=amount;
   en.flashTime=50;
   if(towerKey) en.lastHitTowerKey=towerKey;
@@ -2342,6 +2473,15 @@ function update(dt){
     if(G.battlePushAcc>3){ G.battlePushAcc=0; pushBattleProgress(); }
     G.battleRankAcc=(G.battleRankAcc||0)+dt;
     if(G.battleRankAcc>1){ G.battleRankAcc=0; updateBattleRanking(battleLastProgressSnap); }
+  }
+
+  if(G.autoPlayMode){
+    G.autoPlayAcc=(G.autoPlayAcc||0)+dt;
+    if(G.autoPlayAcc>=(G.autoPlayNextAt||1.8)){
+      G.autoPlayAcc=0;
+      G.autoPlayNextAt=1.5+Math.random()*1.2;
+      autoPlayTick();
+    }
   }
 
   if(G.shakeTime>0) G.shakeTime-=dt*1000;
@@ -2445,9 +2585,10 @@ function update(dt){
 
     if(t.stunTime>0){ t.stunTime=Math.max(0,t.stunTime-sdt*1000); }
 
-    if(t.obelisk && t.obeliskReadyIn>0){ t.obeliskReadyIn=Math.max(0,t.obeliskReadyIn-sdt*1000); }
     if(t.buildAnimT>0){ t.buildAnimT=Math.max(0,t.buildAnimT-sdt*1000); }
     if(t.upgradeFlashT>0){ t.upgradeFlashT=Math.max(0,t.upgradeFlashT-sdt*1000); }
+
+    if(t.aura) continue; // 지휘관류 순수 지원형 타워는 공격하지 않음
 
     if(t.stunTime<=0 && t.kind==='blackhole' && activeBlackholeKeys[t.key]){
       for(var bi=0;bi<G.enemies.length;bi++){
@@ -2480,7 +2621,6 @@ function update(dt){
         var nxt=wps2[en.wp+1];
         var dleft = nxt? Math.hypot(nxt.x-en.x, nxt.y-en.y) : 0;
         var prog=en.wp*10000-dleft;
-        if(G.bossFocus && en.isBoss) prog+=1e9;
         if(prog>bestProg){ bestProg=prog; best=en; }
       }
     }
@@ -2515,6 +2655,20 @@ function update(dt){
         dealDamage(best,dmgVal,t.key);
         applySpecialProcs(dmgVal,best,t.key);
         G.lasers.push({x1:tip.x,y1:tip.y,x2:best.x,y2:best.y,life:150,maxLife:150,color:t.dark,width:2});
+      } else if(t.kind==='pierceSniper'){
+        var psx=t.px+Math.cos(t.angle)*tRange, psy=t.py+Math.sin(t.angle)*tRange;
+        var psHits=[];
+        for(var psi=0;psi<G.enemies.length;psi++){
+          var psEn=G.enemies[psi];
+          if(!psEn.alive) continue;
+          if(psEn.type==='flying' && !t.canBoth) continue;
+          if(pointSegDist(psEn.x,psEn.y,t.px,t.py,psx,psy)<=6) psHits.push(psEn);
+        }
+        psHits.sort(function(a,b){ return Math.hypot(a.x-t.px,a.y-t.py)-Math.hypot(b.x-t.px,b.y-t.py); });
+        var psN=Math.min(t.pierceLimit||2, psHits.length);
+        for(var psj=0;psj<psN;psj++){ dealDamage(psHits[psj], psj===0? dmgVal : dmgVal*0.6, t.key); }
+        applySpecialProcs(dmgVal,best,t.key);
+        G.lasers.push({x1:t.px,y1:t.py,x2:psx,y2:psy,life:160,maxLife:160,color:t.color,width:2.5});
       } else if(t.kind==='laser'){
         var ex=t.px+Math.cos(t.angle)*tRange, ey=t.py+Math.sin(t.angle)*tRange;
         for(var li=0;li<G.enemies.length;li++){
@@ -2528,20 +2682,23 @@ function update(dt){
         var hitSet=[best];
         dealDamage(best,dmgVal,t.key);
         applySpecialProcs(dmgVal,best,t.key);
-        var curX=best.x, curY=best.y;
+        if(best.poisonTime>0) best.poisonTime=Math.min(5000, best.poisonTime+1000); // 시너지: 번개가 중독된 적의 중독 지속시간을 연장
+        var curEn=best;
         for(var ci=1;ci<t.chain;ci++){
-          var nextEn=null, nd=t.chainRange;
+          var chainRangeNow = t.chainRange*((curEn.slowTimer>0)? 1.25 : 1); // 시너지: 냉기로 슬로우된 대상에서는 연쇄 사거리 +25%
+          var nextEn=null, nd=chainRangeNow;
           for(var cj=0;cj<G.enemies.length;cj++){
             var cen=G.enemies[cj];
             if(!cen.alive || cen.type==='flying' || hitSet.indexOf(cen)>=0) continue;
-            var cdist=Math.hypot(cen.x-curX,cen.y-curY);
+            var cdist=Math.hypot(cen.x-curEn.x,cen.y-curEn.y);
             if(cdist<=nd){ nd=cdist; nextEn=cen; }
           }
           if(!nextEn) break;
           dealDamage(nextEn, dmgVal*Math.pow(t.falloff,ci), t.key);
-          G.lasers.push({x1:curX,y1:curY,x2:nextEn.x,y2:nextEn.y,life:220,maxLife:220,color:t.color,width:2.5});
+          if(nextEn.poisonTime>0) nextEn.poisonTime=Math.min(5000, nextEn.poisonTime+1000);
+          G.lasers.push({x1:curEn.x,y1:curEn.y,x2:nextEn.x,y2:nextEn.y,life:220,maxLife:220,color:t.color,width:2.5});
           hitSet.push(nextEn);
-          curX=nextEn.x; curY=nextEn.y;
+          curEn=nextEn;
         }
       } else if(t.kind==='blackhole'){
         for(var bh=0;bh<G.enemies.length;bh++){
@@ -2587,9 +2744,11 @@ function update(dt){
         G.rings.push({x:pr.target.x,y:pr.target.y,r:4,maxR:slowR,life:260,maxLife:260,color:pr.color});
       } else if(pr.kind==='poison'){
         dealDamage(pr.target, pr.dmg, pr.towerKey);
-        pr.target.poisonDps=Math.max(pr.target.poisonDps||0, pr.poisonDps);
-        pr.target.poisonTime=pr.poisonDur;
-        pr.target.poisonTowerKey=pr.towerKey;
+        if(pr.target.elite!=='resist'){
+          pr.target.poisonDps=Math.max(pr.target.poisonDps||0, pr.poisonDps);
+          pr.target.poisonTime=pr.poisonDur;
+          pr.target.poisonTowerKey=pr.towerKey;
+        }
         applySpecialProcs(pr.dmg, pr.target, pr.towerKey);
       } else {
         dealDamage(pr.target, pr.dmg, pr.towerKey);
@@ -2650,6 +2809,7 @@ function update(dt){
 
   G.particles.forEach(function(pt){ pt.x+=pt.vx*sdt; pt.y+=pt.vy*sdt; pt.life-=sdt*1000; });
   G.particles=G.particles.filter(function(pt){ return pt.life>0; });
+  if(G.particles.length>260) G.particles=G.particles.slice(G.particles.length-260); // 성능 보호: 파티클 과다 누적 방지
   G.rings.forEach(function(r){ r.r+=(r.maxR-r.r)*0.3; r.life-=sdt*1000; });
   G.rings=G.rings.filter(function(r){ return r.life>0; });
   G.floaters.forEach(function(f){ f.x+=(f.vx||0)*sdt; f.y+=f.vy*sdt; f.life-=sdt*1000; });
@@ -2800,6 +2960,10 @@ function render(){
     ctx.globalAlpha=1;
   });
 
+  var PERF_HIGH=50, PERF_LOW=35;
+  if(G.perfSimpleMode){ if(G.enemies.length<=PERF_LOW) G.perfSimpleMode=false; }
+  else { if(G.enemies.length>PERF_HIGH) G.perfSimpleMode=true; }
+  var perfSimple=G.perfSimpleMode;
   for(var e2=0;e2<G.enemies.length;e2++){
     var en=G.enemies[e2];
     var by=en.y+Math.sin(en.bob)*1.4;
@@ -2815,8 +2979,8 @@ function render(){
     ctx.ellipse(en.x, shY, shR, shR*0.4, 0, 0, Math.PI*2);
     ctx.fillStyle='#000'; ctx.fill();
     ctx.restore();
-    // 비행 몬스터 날개 (본체 뒤쪽에 그려서 겹침)
-    if(en.type==='flying' && !flashing){
+    // 비행 몬스터 날개 (본체 뒤쪽에 그려서 겹침) - 개체수 많을 때는 생략
+    if(en.type==='flying' && !flashing && !perfSimple){
       var wingFlap=Math.sin(en.bob*3)*0.5+0.5;
       ctx.globalAlpha=(en.phased?0.35:1)*0.85;
       ctx.fillStyle=lightenColor(en.color,0.3);
@@ -2828,10 +2992,12 @@ function render(){
       ctx.fill();
       ctx.globalAlpha = en.phased? 0.35 : 1;
     }
-    if(!flashing) drawEnemyLegs(en, by);
-    ctx.shadowBlur=8; ctx.shadowColor=en.color;
+    if(!flashing && !perfSimple) drawEnemyLegs(en, by);
+    ctx.shadowBlur = perfSimple? 0 : 8; ctx.shadowColor=en.color;
     if(flashing){
       ctx.fillStyle='#ffffff';
+    } else if(perfSimple){
+      ctx.fillStyle=en.color; // 개체수 많을 때는 그라데이션 생략 (성능 최적화)
     } else {
       var bodyGrad=ctx.createRadialGradient(en.x-en.r*0.35,by-en.r*0.35,en.r*0.15,en.x,by,en.r*1.15);
       bodyGrad.addColorStop(0, lightenColor(en.color,0.5));
@@ -2839,23 +3005,23 @@ function render(){
       bodyGrad.addColorStop(1, en.dark);
       ctx.fillStyle=bodyGrad;
     }
-    ctx.strokeStyle=en.dark; ctx.lineWidth=2.2;
+    ctx.strokeStyle=en.dark; ctx.lineWidth=perfSimple?1.3:2.2;
     drawEnemySilhouette(en, by, heading);
-    if(!flashing) drawEnemyBelly(en, by);
-    // 상단 하이라이트 (입체감)
-    if(!flashing){
+    if(!flashing && !perfSimple) drawEnemyBelly(en, by);
+    // 상단 하이라이트 (입체감) - 개체수 많을 때는 생략
+    if(!flashing && !perfSimple){
       ctx.globalAlpha=(en.phased?0.35:1)*0.35;
       ctx.beginPath(); ctx.ellipse(en.x-en.r*0.32,by-en.r*0.4,en.r*0.4,en.r*0.22,-0.5,0,Math.PI*2);
       ctx.fillStyle='#ffffff'; ctx.fill();
       ctx.globalAlpha = en.phased? 0.35 : 1;
     }
-    if(!flashing){
+    if(!flashing && !perfSimple){
       drawEnemyTypeFlavor(en, by, heading);
       drawEnemyFace(en, by, heading);
       drawEnemyMouth(en, by, heading);
     }
-    // 중장갑: 대각선 플레이팅 라인 (딱정벌레 등껍질 모양에 맞춰 클리핑)
-    if(en.type==='armored' && !flashing){
+    // 중장갑: 대각선 플레이팅 라인 (딱정벌레 등껍질 모양에 맞춰 클리핑) - 개체수 많을 때는 생략
+    if(en.type==='armored' && !flashing && !perfSimple){
       ctx.save();
       pathBeetle(en,by); ctx.clip();
       ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1.2;
@@ -2864,7 +3030,7 @@ function render(){
       }
       ctx.restore();
     }
-    // 보스/미니보스: 왕관형 스파이크
+    // 보스/미니보스: 왕관형 스파이크 (드물게 등장하므로 항상 유지)
     if((en.isBoss||en.type==='miniboss') && !flashing){
       ctx.fillStyle=en.dark;
       for(var sp=-2;sp<=2;sp++){
@@ -2877,7 +3043,8 @@ function render(){
     }
     ctx.shadowBlur=0;
     if(en.elite){
-      ctx.strokeStyle='rgba(255,215,0,0.9)'; ctx.lineWidth=1.5;
+      var eliteRingColor = en.elite==='resist'? 'rgba(179,157,219,0.9)' : en.elite==='regen'? 'rgba(126,217,87,0.9)' : en.elite==='swift'? 'rgba(90,200,250,0.9)' : 'rgba(255,215,0,0.9)';
+      ctx.strokeStyle=eliteRingColor; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(en.x,by,en.r+2,0,Math.PI*2); ctx.stroke();
     }
     if(en.type==='crate'){
@@ -3016,6 +3183,11 @@ function updateHUD(){
   document.getElementById('tdResearchP').textContent=fmt(researchPoints);
   var nextChoiceWave=Math.ceil((G.wave+1)/5)*5;
   document.getElementById('tdNextChoice').textContent=Math.max(0,nextChoiceWave-G.wave);
+  var uaOverlay=document.getElementById('tdUpgradeAllOverlay');
+  if(uaOverlay && uaOverlay.style.display!=='none' && !UA_BATCHING){
+    var uaSig=G.money+'|'+Object.keys(G.towers).length;
+    if(uaSig!==UA_LAST_SIG){ renderUpgradeAllPanel(); }
+  }
 }
 
 function highlightTowerButtons(){
@@ -3081,7 +3253,7 @@ function renderFusionOverlay(){
   }
   listEl.innerHTML=groups.map(function(g){
     var ready=g.towers.length>=3;
-    var afterStat = '공격력 +'+((g.grade+1)*20)+'% · 사거리 +'+((g.grade+1)*6)+'%'+(g.grade+1>=5? ' · 공격속도 +'+Math.min(30,(g.grade+1-4)*4)+'%' : '');
+    var afterStat = '공격력 +'+((g.grade+1)*20)+'%'+(g.grade+1>=5? ' · 공격속도 +'+Math.min(30,(g.grade+1-4)*4)+'%' : '');
     var remain=g.towers.length-3;
     var subText = ready
       ? ('합성 시 3개 사용 → F'+(g.grade+1)+' 1개 생성'+(remain>0? (' (F'+g.grade+' '+remain+'개 남음)') : '')+' · '+afterStat)
@@ -3121,22 +3293,23 @@ function closeFusion(){
 function abilityLines(kind, def){
   var lines=[];
   if(kind==='sniper') lines.push('최장 사거리 정밀 저격 (지상/공중 모두 공격 가능)');
+  if(kind==='pierceSniper') lines.push('사거리 방향 최대 '+(def.pierceLimit||2)+'명 관통 저격 (지상/공중 모두 공격 가능, 2번째 이후 대상은 데미지 60%)');
   if(kind==='gatling') lines.push('초고속 연사');
   if(kind==='missile') lines.push('공중 전용 - 비행 몹만 공격 가능');
+  if(def.aura) lines.push('공격하지 않는 지원형 타워 - 사거리 내 다른 타워 공격속도 +'+Math.round((def.auraAtkSpeedBonus||0)*100)+'% (여러 개 지어도 중첩되지 않고 가장 강한 효과만 적용, 무르기로 판매해도 즉시 효과가 사라져 어뷰징 불가)');
   if(def.splash>0) lines.push('스플래시 반경 '+Math.round(def.splash)+' (범위 피해)');
-  if(def.slow>0) lines.push('슬로우 '+Math.round(def.slow*100)+'%, '+(def.slowDur/1000).toFixed(1)+'초 지속');
+  if(def.slow>0) lines.push('슬로우 '+Math.round(def.slow*100)+'%, '+(def.slowDur/1000).toFixed(1)+'초 지속 · 시너지: 슬로우된 적에게는 번개 연쇄 사거리 +25%');
   if(def.armorPierce) lines.push('철갑 몹에게 1.5배 데미지 (다른 타워는 철갑 대상 40% 감소)');
-  if(def.chain>0) lines.push('연쇄 '+def.chain+'타겟 (전달마다 '+Math.round((1-def.falloff)*100)+'%씩 감쇠)');
-  if(def.poisonDps>0) lines.push('도트 '+fmt(Math.round(def.poisonDps))+'/초, '+(def.poisonDur/1000).toFixed(1)+'초 지속');
+  if(def.chain>0) lines.push('연쇄 '+def.chain+'타겟 (전달마다 '+Math.round((1-def.falloff)*100)+'%씩 감쇠) · 시너지: 중독된 적을 맞히면 중독 지속시간 연장, 슬로우된 적에게서는 연쇄 사거리 증가');
+  if(def.poisonDps>0) lines.push('도트 '+fmt(Math.round(def.poisonDps))+'/초, '+(def.poisonDur/1000).toFixed(1)+'초 지속 · 시너지: 중독된 적은 모든 공격으로부터 데미지 +15%');
   if(kind==='laser') lines.push('관통 - 사거리 방향 일직선의 모든 적 동시 타격');
   if(kind==='blackhole') lines.push('범위 내 모든 적 동시 타격 + 흡입(끌어당김, 최대 2개까지만 중첩 · 보스/미니보스는 저항)');
   if(kind==='nova') lines.push('엔드게임 전용 초대형 스플래시');
   if(def.berserker) lines.push('처치 수에 비례해 영구 공격력 증가 (최대 +300%, 500킬)');
-  if(def.obelisk) lines.push('액티브 스킬: 화면의 모든 적을 '+(def.obeliskStunMs/1000)+'초 기절 (쿨다운 '+(def.obeliskCooldownMs/1000)+'초)');
   return lines;
 }
 function towerDamageWith(dmgBase, t){ return dmgBase*G.buffDmg*(1+(t.fusionGrade||0)*0.20)*(1+effResearch().dmg*0.03)*(1+berserkerKillBonus(t)); }
-function towerRangeWith(rangeBase, t){ return rangeBase*G.buffRange*(1+(t.fusionGrade||0)*0.06); }
+function towerRangeWith(rangeBase, t){ return rangeBase*G.buffRange; }
 // 레벨이 오를수록 업그레이드 1회당 공격력 증가율이 점점 완만해짐 (체감 수확)
 // Lv1→2: +27%, Lv5→6: +약17%, Lv9→10: +약12%, Lv19→20: +약8%
 function upgradeDmgMult(level){
@@ -3148,10 +3321,12 @@ function upgradeCost(t){
 }
 function upgradeStatLines(t){
   var lines=[];
+  if(t.aura){
+    lines.push('공격속도 지원 효과 +'+Math.round((t.auraAtkSpeedBonus||0)*100)+'% → +'+Math.round(Math.min(0.5,(t.auraAtkSpeedBonus||0)+0.02)*100)+'%');
+    return lines;
+  }
   var curDmg=Math.round(towerDamage(t)), newDmg=Math.round(towerDamageWith(Math.round(t.dmg*upgradeDmgMult(t.level)), t));
   lines.push('공격력 '+fmt(curDmg)+' → '+fmt(newDmg));
-  var curRange=Math.round(towerRange(t)), newRange=Math.round(towerRangeWith(Math.round(t.range*1.06), t));
-  lines.push('사거리 '+curRange+' → '+newRange);
   if(t.poisonDps){ lines.push('도트 '+fmt(t.poisonDps)+'/초 → '+fmt(Math.round(t.poisonDps*1.3))+'/초'); }
   if(t.pullStrength){ lines.push('흡입력 '+fmt(t.pullStrength)+' → '+fmt(Math.round(t.pullStrength*1.1))); }
   return lines;
@@ -3172,14 +3347,6 @@ function popupHTML(t){
       +(t.berserker? '<div style="font-size:10px; line-height:1.5; color:#FF8A80;">• 현재 보너스: +'+Math.round(berserkerKillBonus(t)*100)+'% (누적 '+fmt(t.kills||0)+'킬)</div>' : '')
       +'</div>'
     : '';
-  var obeliskHtml='';
-  if(t.obelisk){
-    var obReady = t.obeliskReadyIn<=0;
-    obeliskHtml='<div style="margin-top:6px;">'
-      +'<button id="tdPopObelisk" class="tdPopBtn" style="width:100%; background:'+(obReady? 'linear-gradient(135deg,#9B59B6,#5B2C6F)' : 'rgba(255,255,255,0.08)')+'; color:#fff;" '+(obReady? '' : 'disabled')+'>'
-      +(obReady? '⚡ 전체 기절 발동' : '재사용 대기 '+Math.ceil(t.obeliskReadyIn/1000)+'초')
-      +'</button></div>';
-  }
   var upLines=upgradeStatLines(t);
   var upHtml='<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.08); text-align:left;">'
     +'<div style="font-size:9.5px; color:var(--text-secondary); margin-bottom:3px;">업그레이드 시 (Lv'+t.level+' → Lv'+(t.level+1)+')</div>'
@@ -3197,7 +3364,6 @@ function popupHTML(t){
     +'</div>'
   +'</div>'
   +abilityHtml
-  +obeliskHtml
   +upHtml
   +(undoable? '<div style="margin-top:6px; font-size:9.5px; color:#29B6C6;">방금 배치한 타워는 전액 환불로 되돌릴 수 있습니다</div>' : '')
   +'<div style="display:flex; gap:6px; margin-top:8px;">'
@@ -3211,26 +3377,11 @@ function refreshTowerPopup(){
   towerPopup.innerHTML=popupHTML(G.selectedTower);
   wirePopupButtons(G.selectedTower);
 }
-function activateObelisk(t){
-  if(!t.obelisk || t.obeliskReadyIn>0) return;
-  for(var i=0;i<G.enemies.length;i++){
-    var en=G.enemies[i];
-    if(!en.alive) continue;
-    en.stunTime=Math.max(en.stunTime||0, t.obeliskStunMs);
-  }
-  t.obeliskReadyIn=t.obeliskCooldownMs;
-  G.rings.push({x:t.px,y:t.py,r:6,maxR:600,life:600,maxLife:600,color:'#9B59B6'});
-  G.shakeTime=200; G.shakeMag=3;
-  G.waveBanner={text:'⚡ 오벨리스크 발동! 모든 적 '+(t.obeliskStunMs/1000)+'초 기절', life:1600, maxLife:1600, boss:false};
-  playTone(220,0.3,'sine',0.12); playTone(440,0.3,'sine',0.1,0.1); playTone(880,0.35,'sine',0.09,0.2);
-}
 function wirePopupButtons(t){
   var up=document.getElementById('tdPopUpgrade');
   var sell=document.getElementById('tdPopSell');
   var close=document.getElementById('tdPopClose');
-  var obelisk=document.getElementById('tdPopObelisk');
   if(up) up.onclick=function(){ upgradeTower(t); refreshTowerPopup(); };
-  if(obelisk) obelisk.onclick=function(){ activateObelisk(t); refreshTowerPopup(); };
   if(sell) sell.onclick=function(){
     sell.style.transform='scale(0.92)';
     sell.style.opacity='0.6';
@@ -3315,8 +3466,8 @@ function updateSelInfo(){
 
 function applyLuckyLevel5(t){
   for(var i=0;i<4;i++){
-    t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level));
-    t.range=Math.round(t.range*1.04);
+    if(t.aura){ t.auraAtkSpeedBonus=Math.min(0.5,(t.auraAtkSpeedBonus||0)+0.02); }
+    else { t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level)); }
     if(t.poisonDps) t.poisonDps=Math.round(t.poisonDps*1.3);
     if(t.pullStrength) t.pullStrength=Math.round(t.pullStrength*1.1);
     t.level++;
@@ -3335,6 +3486,88 @@ function sfxLucky(){
   playTone(660,0.09,'triangle',0.09); playTone(880,0.09,'triangle',0.09,0.08);
   playTone(1100,0.09,'triangle',0.09,0.16); playTone(1400,0.16,'triangle',0.11,0.24);
 }
+// ===== 오토플레이 모드 (일반 유저 수준 - 30웨이브 클리어급) =====
+// 격자 기반 isPath()는 경로를 타일 단위로 근사한 것이라, 코너나 좁은 구간에서 실제 경로 선과
+// 미세하게 어긋날 수 있음. 오토플레이는 실제 웨이포인트 선분까지의 기하학적 거리로 한 번 더 검증해서
+// 경로 위/바로 옆에 타워가 설치되는 문제를 방지함.
+function tileTooCloseToPath(gx,gy){
+  var px=gx*TILE+TILE/2, py=gy*TILE+TILE/2;
+  for(var i=0;i<waypoints.length-1;i++){
+    var a=waypoints[i], b=waypoints[i+1];
+    if(pointSegDist(px,py,a.x,a.y,b.x,b.y) < TILE*0.62) return true;
+  }
+  return false;
+}
+function pathCoverageScore(gx, gy, range){
+  var px=gx*TILE+TILE/2, py=gy*TILE+TILE/2;
+  var tileR=Math.ceil(range/TILE)+1;
+  var count=0;
+  for(var dy=-tileR;dy<=tileR;dy++){
+    for(var dx=-tileR;dx<=tileR;dx++){
+      var cx=gx+dx, cy=gy+dy;
+      if(!inBounds(cx,cy) || !isPath(cx,cy)) continue;
+      var tx=cx*TILE+TILE/2, ty=cy*TILE+TILE/2;
+      if(Math.hypot(px-tx,py-ty)<=range) count++;
+    }
+  }
+  return count;
+}
+function autoPlayBuild(){
+  var candidates=[];
+  for(var gy=0;gy<ROWS;gy++){
+    for(var gx=0;gx<COLS;gx++){
+      if(isPath(gx,gy)) continue;
+      if(G.towers[gx+','+gy]) continue;
+      if(tileTooCloseToPath(gx,gy)) continue;
+      candidates.push({gx:gx,gy:gy});
+    }
+  }
+  if(candidates.length===0) return;
+  // 살 수 있는 타워 후보 (전 재산 몰빵은 안 하는 '일반 유저' 성향 - 보유금의 65%까지만 고려)
+  var affordable=ORDER.filter(function(k){
+    var def=TOWER_DEFS[k];
+    if(!def || k==='blackhole' || k==='nova' || k==='commander') return false; // 고급/서포트 전용 타워는 일반 유저가 잘 안 씀
+    if(def.unlockWave && G.wave<def.unlockWave) return false;
+    var cost=Math.round(def.cost*G.buffDiscount);
+    return cost<=G.money*0.65;
+  });
+  if(affordable.length===0) return;
+  affordable.sort(function(a,b){ return TOWER_DEFS[a].cost-TOWER_DEFS[b].cost; });
+  // 대체로 싸고 무난한 쪽 선호, 가끔 다양하게 (완벽한 메타픽은 아님)
+  var poolN=Math.max(1, Math.ceil(affordable.length*0.6));
+  var kind = Math.random()<0.65
+    ? affordable[Math.floor(Math.random()*poolN)]
+    : affordable[Math.floor(Math.random()*affordable.length)];
+  var def=TOWER_DEFS[kind];
+  var range=def.range*(G.buffRange||1);
+  var scored=candidates.map(function(c){
+    return {gx:c.gx, gy:c.gy, score:pathCoverageScore(c.gx,c.gy,range)};
+  }).filter(function(c){ return c.score>0; }); // 사거리 안 닿는 자리는 애초에 후보에서 제외
+  if(scored.length===0) return;
+  scored.sort(function(a,b){ return b.score-a.score; });
+  // 항상 최적 타일만 고르진 않는 '일반 유저' - 상위 50% 중 무작위 선택
+  var tilePoolN=Math.max(1, Math.ceil(scored.length*0.5));
+  var pick=scored[Math.floor(Math.random()*tilePoolN)];
+  if(isPath(pick.gx,pick.gy) || tileTooCloseToPath(pick.gx,pick.gy)) return; // 최종 안전장치
+  placeTower(pick.gx, pick.gy, kind);
+}
+function autoPlayUpgrade(){
+  var keys=Object.keys(G.towers);
+  if(keys.length===0) return;
+  var towers=keys.map(function(k){ return G.towers[k]; });
+  towers.sort(function(a,b){ return a.level-b.level; });
+  var poolN=Math.max(1, Math.ceil(towers.length*0.6));
+  var t=towers[Math.floor(Math.random()*poolN)];
+  var cost=upgradeCost(t);
+  if(G.money>=cost*1.4){ upgradeTower(t); }
+}
+function autoPlayTick(){
+  if(!G.autoPlayMode || G.gameOver || G.manualPause || G.choosing) return;
+  var haveTowers=Object.keys(G.towers).length>0;
+  var doUpgrade = haveTowers && Math.random()<0.4;
+  if(doUpgrade) autoPlayUpgrade(); else autoPlayBuild();
+}
+
 function spawnBuildEffect(x,y,color){
   G.rings.push({x:x,y:y,r:3,maxR:32,life:380,maxLife:380,color:color});
   for(var i=0;i<9;i++){
@@ -3349,9 +3582,10 @@ function spawnDemolishEffect(x,y,color){
     G.particles.push({x:x,y:y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-25,life:380+Math.random()*220,maxLife:600,color:i%2? color:'#5a5a5a',size:2+Math.random()*2.6});
   }
 }
-function placeTower(gx,gy){
+function placeTower(gx,gy,forceKind){
   if(G.manualPause) return;
-  var def=TOWER_DEFS[G.placeType];
+  var kind=forceKind||G.placeType;
+  var def=TOWER_DEFS[kind];
   if(!def) return;
   if(def.unlockWave && G.wave<def.unlockWave) return;
   if(!inBounds(gx,gy) || isPath(gx,gy)) return;
@@ -3362,7 +3596,7 @@ function placeTower(gx,gy){
   G.money-=cost;
   var newTower={
     key:key, gx:gx, gy:gy, px:gx*TILE+TILE/2, py:gy*TILE+TILE/2, angle:0,
-    kind:G.placeType, name:def.name, baseCost:cost, spent:cost, level:1, fusionGrade:0, kills:0,
+    kind:kind, name:def.name, baseCost:cost, spent:cost, level:1, fusionGrade:0, kills:0,
     dmg:def.dmg, range:def.range, rate:def.rate, cooldown:0, stunTime:0,
     color:def.color, dark:def.dark, airOnly:def.airOnly||false, canBoth:def.canBoth||false, armorPierce:def.armorPierce||false,
     splash:def.splash||0, slow:def.slow||0, slowDur:def.slowDur||0,
@@ -3370,7 +3604,8 @@ function placeTower(gx,gy){
     poisonDps:def.poisonDps||0, poisonDur:def.poisonDur||3000,
     pullStrength:def.pullStrength||0,
     berserker:def.berserker||false,
-    obelisk:def.obelisk||false, obeliskCooldownMs:def.obeliskCooldownMs||0, obeliskStunMs:def.obeliskStunMs||0, obeliskReadyIn:0,
+    aura:def.aura||false, auraAtkSpeedBonus:def.auraAtkSpeedBonus||0,
+    pierceLimit:def.pierceLimit||0,
     buildAnimT:350, upgradeFlashT:0
   };
   G.towers[key]=newTower;
@@ -3391,9 +3626,9 @@ function upgradeTower(t){
   var cost=upgradeCost(t);
   if(G.money<cost) return;
   G.money-=cost; t.spent+=cost;
-  t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level));
+  if(t.aura){ t.auraAtkSpeedBonus=Math.min(0.5, (t.auraAtkSpeedBonus||0)+0.02); }
+  else { t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level)); }
   t.level++;
-  t.range=Math.round(t.range*1.04);
   if(t.poisonDps) t.poisonDps=Math.round(t.poisonDps*1.3);
   if(t.pullStrength) t.pullStrength=Math.round(t.pullStrength*1.1);
   t.upgradeFlashT=300;
@@ -3403,6 +3638,112 @@ function upgradeTower(t){
   }
   sfxUpgrade();
   updateHUD();
+}
+var UA_QTY={};
+var UA_LAST_SIG='';
+var UA_BATCHING=false;
+function openUpgradeAllPanel(){
+  renderUpgradeAllPanel();
+  document.getElementById('tdUpgradeAllOverlay').style.display='flex';
+}
+function closeUpgradeAllPanel(){
+  document.getElementById('tdUpgradeAllOverlay').style.display='none';
+}
+function renderUpgradeAllPanel(){
+  var listEl=document.getElementById('tdUpgradeAllList');
+  if(!listEl) return;
+  UA_LAST_SIG=G.money+'|'+Object.keys(G.towers).length;
+  var groups={};
+  Object.keys(G.towers).forEach(function(k){
+    var t=G.towers[k];
+    var gk=t.kind+'_'+t.level;
+    if(!groups[gk]) groups[gk]={kind:t.kind, level:t.level, towers:[]};
+    groups[gk].towers.push(t);
+  });
+  var groupKeys=Object.keys(groups);
+  groupKeys.sort(function(ka,kb){
+    var a=groups[ka], b=groups[kb];
+    var ia=ORDER.indexOf(a.kind), ib=ORDER.indexOf(b.kind);
+    if(ia!==ib) return ia-ib;
+    return a.level-b.level;
+  });
+  if(groupKeys.length===0){
+    listEl.innerHTML='<div style="font-size:11px; opacity:0.7; padding:14px;">배치된 타워가 없습니다</div>';
+    return;
+  }
+  // 사라진 그룹의 수량 상태는 정리하고, 현재 그룹 수량은 최대치를 넘지 않도록 보정
+  var validKeys={};
+  groupKeys.forEach(function(gk){
+    var max=groups[gk].towers.length;
+    validKeys[gk]=true;
+    if(UA_QTY[gk]===undefined) UA_QTY[gk]=max;
+    if(UA_QTY[gk]>max) UA_QTY[gk]=max;
+    if(UA_QTY[gk]<1) UA_QTY[gk]=1;
+  });
+  Object.keys(UA_QTY).forEach(function(gk){ if(!validKeys[gk]) delete UA_QTY[gk]; });
+
+  listEl.innerHTML=groupKeys.map(function(gk){
+    var g=groups[gk];
+    var def=TOWER_DEFS[g.kind];
+    var max=g.towers.length;
+    var qty=UA_QTY[gk];
+    var unitCost=upgradeCost(g.towers[0]);
+    var totalCost=unitCost*qty;
+    var affordable=G.money>=totalCost;
+    var atMax=qty>=max, atMin=qty<=1;
+    return '<div style="display:flex; flex-direction:column; gap:6px; background:rgba(255,255,255,0.06); border-radius:9px; padding:8px 10px;">'
+      +'<div style="display:flex; align-items:center; gap:8px;">'
+        +'<div style="width:28px; height:28px; border-radius:50%; background:'+def.color+'; flex-shrink:0; display:flex; align-items:center; justify-content:center;">'+ICONS.turret+'</div>'
+        +'<div style="flex:1; text-align:left; min-width:0;">'
+          +'<div style="font-size:11.5px; font-weight:700;">'+def.name+' <span style="opacity:0.7; font-weight:500;">Lv'+g.level+' × '+max+'개</span></div>'
+          +'<div style="font-size:10px; opacity:0.85; color:'+(affordable?'#8FD16A':'#FF6B6B')+';">'+fmt(totalCost)+'골드 <span style="opacity:0.6;">('+fmt(unitCost)+'골드 × '+qty+')</span></div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="display:flex; align-items:center; gap:5px;">'
+        +'<button class="tdUAQtyBtn" data-key="'+gk+'" data-delta="-10" style="min-width:26px; padding:6px 3px; font-size:9.5px; font-weight:700; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.08); color:#fff;" '+(atMin?'disabled':'')+'>-10</button>'
+        +'<button class="tdUAQtyBtn" data-key="'+gk+'" data-delta="-1" style="min-width:22px; padding:6px 3px; font-size:9.5px; font-weight:700; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.08); color:#fff;" '+(atMin?'disabled':'')+'>-1</button>'
+        +'<div style="min-width:44px; text-align:center; font-size:11.5px; font-weight:700; background:rgba(255,255,255,0.05); border-radius:6px; padding:6px 2px;">'+qty+'개</div>'
+        +'<button class="tdUAQtyBtn" data-key="'+gk+'" data-delta="1" style="min-width:22px; padding:6px 3px; font-size:9.5px; font-weight:700; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.08); color:#fff;" '+(atMax?'disabled':'')+'>+1</button>'
+        +'<button class="tdUAQtyBtn" data-key="'+gk+'" data-delta="10" style="min-width:26px; padding:6px 3px; font-size:9.5px; font-weight:700; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.08); color:#fff;" '+(atMax?'disabled':'')+'>+10</button>'
+        +'<button class="tdUAQtyMaxBtn" data-key="'+gk+'" style="padding:6px 6px; font-size:9.5px; font-weight:700; border-radius:6px; border:1px solid rgba(240,185,11,0.4); background:rgba(240,185,11,0.12); color:#F0D08F;" '+(atMax?'disabled':'')+'>최대('+max+')</button>'
+      +'</div>'
+      +'<button class="tdUpgradeAllGroupBtn" data-key="'+gk+'" style="padding:8px 11px; font-size:10.5px; font-weight:700; border-radius:8px; border:none; background:'+(affordable? 'linear-gradient(135deg,#8FD16A,#3E7A28)' : 'rgba(255,255,255,0.1)')+'; color:'+(affordable? '#0d1f06' : 'rgba(255,255,255,0.4)')+';" '+(affordable? '' : 'disabled')+'>'+qty+'개 업그레이드</button>'
+    +'</div>';
+  }).join('');
+
+  listEl.querySelectorAll('.tdUAQtyBtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var gk=btn.dataset.key, g=groups[gk];
+      if(!g) return;
+      var delta=parseInt(btn.dataset.delta,10);
+      var v=(UA_QTY[gk]||g.towers.length)+delta;
+      v=Math.max(1, Math.min(g.towers.length, v));
+      UA_QTY[gk]=v;
+      renderUpgradeAllPanel();
+    });
+  });
+  listEl.querySelectorAll('.tdUAQtyMaxBtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var gk=btn.dataset.key, g=groups[gk];
+      if(!g) return;
+      UA_QTY[gk]=g.towers.length;
+      renderUpgradeAllPanel();
+    });
+  });
+  listEl.querySelectorAll('.tdUpgradeAllGroupBtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var gk=btn.dataset.key, g=groups[gk];
+      if(!g) return;
+      var qty=Math.min(UA_QTY[gk]||g.towers.length, g.towers.length);
+      var unitCost=upgradeCost(g.towers[0]);
+      var totalCost=unitCost*qty;
+      if(G.money<totalCost) return;
+      UA_BATCHING=true;
+      for(var i=0;i<qty;i++){ upgradeTower(g.towers[i]); }
+      UA_BATCHING=false;
+      renderUpgradeAllPanel();
+    });
+  });
 }
 
 function undoPlacement(t){
@@ -3603,6 +3944,12 @@ function openWiki(){
 document.getElementById('tdWikiBtn').addEventListener('click', openWiki);
 document.getElementById('tdWikiCloseBtn').addEventListener('click', function(){
   document.getElementById('tdWikiOverlay').style.display='none';
+});
+document.getElementById('tdPatchNotesBtn').addEventListener('click', function(){
+  document.getElementById('tdPatchNotesOverlay').style.display='flex';
+});
+document.getElementById('tdPatchNotesCloseBtn').addEventListener('click', function(){
+  document.getElementById('tdPatchNotesOverlay').style.display='none';
 });
 document.getElementById('tdWikiTabTower').addEventListener('click', function(){
   wikiTab='tower';
@@ -4010,6 +4357,11 @@ document.getElementById('tdFusionBtn').addEventListener('click', function(){
   openFusion();
 });
 document.getElementById('tdFusionCloseBtn').addEventListener('click', closeFusion);
+document.getElementById('tdUpgradeAllBtn').addEventListener('click', function(){
+  if(pauseBlocked()) return;
+  openUpgradeAllPanel();
+});
+document.getElementById('tdUpgradeAllCloseBtn').addEventListener('click', closeUpgradeAllPanel);
 document.getElementById('tdLabBtn').addEventListener('click', function(){
   ensureAudio();
   if(pauseBlocked()) return;
@@ -4065,6 +4417,12 @@ document.getElementById('tdExitBtn').addEventListener('click', function(){
   if(startOverlay.style.display==='flex') return; // 아직 게임 시작 전이면 무시
   document.getElementById('tdExitConfirm').style.display='flex';
 });
+document.getElementById('tdAutoPlayBtn').addEventListener('click', function(){
+  G.autoPlayMode=!G.autoPlayMode;
+  G.autoPlayAcc=0; G.autoPlayNextAt=1.5+Math.random()*1.2;
+  this.classList.toggle('tdActive', G.autoPlayMode);
+  this.querySelector('.tdCtrlLabel').textContent='오토플레이 '+(G.autoPlayMode? 'ON':'OFF');
+});
 document.getElementById('tdExitCancelBtn').addEventListener('click', function(){
   document.getElementById('tdExitConfirm').style.display='none';
 });
@@ -4115,10 +4473,6 @@ document.getElementById('tdAutoChoiceBtn').addEventListener('click', function(){
 document.getElementById('tdKillDisplayBtn').addEventListener('click', function(){
   G.showKillCounts=!G.showKillCounts;
   this.classList.toggle('tdActive', G.showKillCounts);
-});
-document.getElementById('tdBossFocusBtn').addEventListener('click', function(){
-  G.bossFocus=!G.bossFocus;
-  this.classList.toggle('tdActive', G.bossFocus);
 });
 document.getElementById('tdPassiveBtn').addEventListener('click', function(){
   if(passiveOverlay.style.display==='flex') closePassive(); else openPassive();
