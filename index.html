@@ -591,8 +591,8 @@ var TOWER_DEFS={
   poison:{name:'독', cost:8000, dmg:48, range:100, rate:600, poisonDps:85, poisonDur:3500, color:'#5FA83D', dark:'#34611F'},
   laser:{name:'레이저', cost:15000, dmg:70, range:175, rate:430, pierce:true, color:'#E24B4A', dark:'#8C1F1F'},
   plasma:{name:'플라즈마', cost:30000, dmg:200, range:125, rate:900, splash:100, color:'#D1479B', dark:'#832C61'},
-  blackhole:{name:'블랙홀', cost:40000, dmg:55, range:140, rate:300, pullStrength:58, color:'#4A2E7A', dark:'#1C1230'},
-  nova:{name:'초신성', cost:150000, dmg:600, range:150, rate:1200, splash:140, unlockWave:50, color:'#FF3864', dark:'#7A0F27'}
+  blackhole:{name:'블랙홀', cost:50000, dmg:50, range:135, rate:350, pullStrength:58, color:'#4A2E7A', dark:'#1C1230'},
+  nova:{name:'초신성', cost:120000, dmg:700, range:150, rate:1100, splash:140, unlockWave:50, color:'#FF3864', dark:'#7A0F27'}
 };
 
 var ENEMY_TYPES={
@@ -1244,17 +1244,31 @@ function resetGame(forBattle){
   updateHUD(); updateSelInfo(); refreshTowerButtonLabels();
 }
 
-function towerDamage(t){ return t.dmg*G.buffDmg*(1+(t.fusionGrade||0)*0.15)*(1+effResearch().dmg*0.04); }
-function towerRange(t){ return t.range*G.buffRange*(1+(t.fusionGrade||0)*0.05); }
+function towerDamage(t){ return t.dmg*G.buffDmg*(1+(t.fusionGrade||0)*0.12)*(1+effResearch().dmg*0.03); }
+function towerRange(t){ return t.range*G.buffRange*(1+(t.fusionGrade||0)*0.04); }
 function towerRate(t){ return t.rate/G.buffAtkSpeed; }
 function goldMult(){ return G.buffGold*(1+effResearch().goldGain*0.08); }
 
 function waveComposition(wave){
   var isBoss = wave%10===0;
   var isMiniBoss = !isBoss && wave%5===0;
-  var baseCount = 6+Math.floor(wave*1.5);
-  var count = isBoss? Math.max(3,Math.floor(baseCount*0.4)) : baseCount;
-  return {count:count, isBoss:isBoss, isMiniBoss:isMiniBoss};
+
+  var growth =
+      wave < 40 ? 1.5 :
+      wave < 80 ? 1.2 :
+      1.0;
+
+  var baseCount = 6 + Math.floor(wave * growth);
+
+  var count = isBoss
+      ? Math.max(3, Math.floor(baseCount*0.4))
+      : baseCount;
+
+  return {
+      count:count,
+      isBoss:isBoss,
+      isMiniBoss:isMiniBoss
+  };
 }
 
 function scheduleNextCrate(blockStart){
@@ -1294,7 +1308,7 @@ function spawnOneEnemy(){
   var isBoss = G.bossQueued && G.remainingToSpawn===1;
   var isMiniBoss = !isBoss && G.miniBossQueued && G.remainingToSpawn===1;
   var isCrate = !isBoss && !isMiniBoss && !G.crateSpawned && wave===G.crateWave && G.remainingToSpawn===1;
-  var baseHp = 100*Math.pow(1.18, wave-1);
+  var baseHp = 100*Math.pow(1.17, wave-1);
   var baseSpeed = Math.min(140, 42+wave*0.9);
   var baseReward = 5*Math.pow(1.14, wave-1);
   var line = (!isBoss && wave>=LINE2_WAVE && Math.random()<0.5) ? 1 : 0;
@@ -1328,7 +1342,7 @@ function spawnOneEnemy(){
   }
   if(isMiniBoss){
     G.miniBossQueued=false;
-    var mbHp=Math.round(baseHp*6);
+    var mbHp=Math.round(baseHp*5);
     var mbSpeed=baseSpeed*0.8;
     var mbReward=Math.round(baseReward*8);
     G.enemies.push({x:wps[0].x,y:wps[0].y,wp:0,bob:Math.random()*10,line:line,
@@ -1348,7 +1362,7 @@ function spawnOneEnemy(){
     type:typeKey,isBoss:false,shape:td.shape,color:td.color,dark:td.dark,alive:true,
     slowFactor:0,slowTimer:0,poisonTime:0,poisonDps:0,poisonTickAcc:0,poisonTowerKey:null,isChild:false,
     flashTime:0,shieldTime:0,rushTime:0,lastHitTowerKey:null});
-  if(wave>=30 && Math.random()<0.15){
+  if(wave>=35 && Math.random()<0.10){
     var pKeys=Object.keys(ELITE_PREFIXES);
     var pick=pKeys[Math.floor(Math.random()*pKeys.length)];
     var newEn=G.enemies[G.enemies.length-1];
@@ -2513,7 +2527,7 @@ var MONSTER_DESC={
   thief:{unlock:10, desc:'기지에 도달하면 생명뿐 아니라 골드까지 훔쳐갑니다.'},
   split:{unlock:13, desc:'죽으면 약한 자식 2마리로 분열합니다.'},
   ironclad:{unlock:17, desc:'슬로우에 면역이고, 관통포를 제외한 모든 타워의 데미지가 40% 감소합니다. 관통포는 오히려 1.5배 데미지.'},
-  titan:{unlock:25, desc:'기지에 도달하면 생명을 2개 소모하는 거대 몬스터입니다.'},
+  titan:{unlock:30, desc:'기지에 도달하면 생명을 2개 소모하는 거대 몬스터입니다.'},
   cloner:{unlock:40, desc:'죽으면 3마리로 분열합니다 (분열보다 강력한 버전).'},
   phantom:{unlock:60, desc:'3초 주기로 1초간 투명해져서 그동안 어떤 타워로도 타겟팅할 수 없습니다.'},
   vampire:{unlock:80, desc:'주변에서 다른 몹이 죽을 때마다 체력을 회복합니다. 근처 잡몹을 먼저 정리하는 게 좋습니다.'},
