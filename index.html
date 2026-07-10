@@ -137,6 +137,12 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       <div id="tdPassiveList" style="width:100%; max-width:340px;"></div>
       <button id="tdPassiveCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
     </div>
+    <div id="tdFusionOverlay" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; background:rgba(0,0,0,0.85); border-radius:var(--radius); color:#fff; padding:14px 12px; text-align:center; overflow-y:auto;">
+      <div style="font-size:14px; font-weight:600;">타워 합성</div>
+      <div style="font-size:10.5px; opacity:0.8; max-width:320px; line-height:1.5;">같은 타워, 같은 등급을 <b style="color:#F0B90B;">3개</b> 모으면 <b style="color:#F0B90B;">1개(공격력 +15%, 사거리 +5%)</b>로 합쳐집니다. 아래 목록에서 바로 합성할 수 있어요.</div>
+      <div id="tdFusionList" style="display:flex; flex-direction:column; gap:6px; width:100%; max-width:340px; margin-top:4px;"></div>
+      <button id="tdFusionCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
+    </div>
   </div>
 
   <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;">
@@ -148,7 +154,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
   <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
     <button id="tdSpeedBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdSpeedIcon"></span><span class="tdCtrlLabel">배속 전환</span></button>
     <button id="tdPauseBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdPauseIcon"></span><span class="tdCtrlLabel">일시정지</span></button>
-    <button id="tdFusionBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdFusionIcon"></span><span class="tdCtrlLabel">합성 모드</span></button>
+    <button id="tdFusionBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdFusionIcon"></span><span class="tdCtrlLabel">타워 합성</span></button>
     <button id="tdLabBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdLabIcon"></span><span class="tdCtrlLabel">연구소</span></button>
     <button id="tdMusicBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdMusicIcon"></span><span class="tdCtrlLabel">배경음악 끄기</span></button>
     <button id="tdSfxBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdSfxIcon"></span><span class="tdCtrlLabel">효과음 끄기</span></button>
@@ -590,7 +596,7 @@ loadLocalXP();
 var currentUser=null;
 var currentNickname=null;
 var syncTimer=null;
-function nickKey(nick){ return nick.trim().toLowerCase(); }
+function nickKey(nick){ return nick.trim().normalize('NFC').toLowerCase(); }
 function dbNickKey(nick){ return encodeURIComponent(nickKey(nick)); }
 async function lookupEmailByNickname(nick){
   if(!fbReady()) return null;
@@ -761,7 +767,7 @@ async function fetchLeaderboard(){
 async function submitScore(name, wave, kills){
   if(!fbReady()) throw new Error('firebase not ready');
   var key=dbNickKey(name);
-  var entry={name:name, wave:wave, kills:kills, ts:Date.now()};
+  var entry={name:name, wave:wave, kills:kills, ts:Date.now(), level:levelFromXP(userXP)};
   if(currentUser) entry.uid=currentUser.uid;
   var improved=true;
   await firebase.database().ref(RANK_KEY+'/'+key).transaction(function(current){
@@ -795,9 +801,10 @@ function renderRankList(list){
   if(!list || list.length===0){ rankListEl.innerHTML='아직 등록된 기록이 없습니다.'; return; }
   var rows=list.map(function(e,i){
     var medal = i===0?'🥇':(i===1?'🥈':(i===2?'🥉':(i+1)+'.'));
-    return '<div style="display:flex; justify-content:space-between; gap:8px; padding:6px 8px; background:rgba(255,255,255,0.06); border-radius:8px;">'
+    var lvlBadge = e.level ? '<span style="opacity:0.7; font-size:9.5px; color:#F0B90B;">Lv'+e.level+'</span>' : '';
+    return '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 8px; background:rgba(255,255,255,0.06); border-radius:8px;">'
       +'<span style="min-width:26px; text-align:left;">'+medal+'</span>'
-      +'<span style="flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+escapeHtml(e.name||'익명')+'</span>'
+      +'<span style="flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:5px;">'+escapeHtml(e.name||'익명')+lvlBadge+'</span>'
       +'<span>웨이브 '+fmt(e.wave)+'</span>'
       +'<span style="opacity:0.7;">킬 '+fmt(e.kills||0)+'</span>'
       +'</div>';
@@ -835,7 +842,7 @@ function resetGame(){
   G.shakeTime=0; G.shakeMag=0; G.waveBanner=null; G.timeAcc=0;
   G.critChance=0.08+research.crit*0.01; G.critMult=1.8; G.totalKills=0;
   G.buffAtkSpeed=1; G.buffGold=1; G.buffRange=1; G.buffDiscount=1; G.buffDmg=1; G.specials=[];
-  overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none';
+  overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none'; document.getElementById('tdFusionOverlay').style.display='none';
   rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록'; rankSubmitBtn.style.display=''; rankNameInput.disabled=false; rankNameInput.value='';
   towerPopup.style.display='none'; towerPopup.style.opacity='0';
   startOverlay.style.display='flex';
@@ -1747,10 +1754,8 @@ function canFuse(list){
   return list.every(function(x){ return x.kind===k && (x.fusionGrade||0)===g; });
 }
 
-function doFusion(){
-  if(G.manualPause) return;
-  var sel=G.fusionSelection;
-  if(!canFuse(sel)) return;
+function performFusion(sel){
+  if(!canFuse(sel)) return false;
   var keep=sel[0];
   keep.fusionGrade=(keep.fusionGrade||0)+1;
   keep.kills=(keep.kills||0)+(sel[1].kills||0)+(sel[2].kills||0);
@@ -1758,8 +1763,68 @@ function doFusion(){
   spawnParticles(keep.px,keep.py,'#F0B90B',14,110);
   spawnGoldFloater(keep.px, keep.py-24, '합성 완료 F'+keep.fusionGrade);
   sfxFusion();
-  G.fusionSelection=[];
-  updateSelInfo();
+  updateHUD();
+  return true;
+}
+function doFusion(){
+  if(G.manualPause) return;
+  var sel=G.fusionSelection;
+  if(performFusion(sel)){ G.fusionSelection=[]; updateSelInfo(); }
+}
+function fusableGroups(){
+  var byGroup={};
+  Object.keys(G.towers).forEach(function(k){
+    var t=G.towers[k];
+    var gk=t.kind+'_'+(t.fusionGrade||0);
+    if(!byGroup[gk]) byGroup[gk]={kind:t.kind, name:t.name, grade:t.fusionGrade||0, color:t.color, towers:[]};
+    byGroup[gk].towers.push(t);
+  });
+  return Object.keys(byGroup).map(function(gk){ return byGroup[gk]; })
+    .filter(function(g){ return g.grade<10; })
+    .sort(function(a,b){ return b.towers.length-a.towers.length || a.name.localeCompare(b.name); });
+}
+function fuseGroup(kind, grade){
+  if(G.manualPause) return;
+  var matches=Object.keys(G.towers).map(function(k){ return G.towers[k]; })
+    .filter(function(t){ return t.kind===kind && (t.fusionGrade||0)===grade; });
+  if(matches.length<3) return;
+  matches.sort(function(a,b){ return (b.kills||0)-(a.kills||0); });
+  performFusion(matches.slice(0,3));
+  renderFusionOverlay();
+}
+function renderFusionOverlay(){
+  var listEl=document.getElementById('tdFusionList');
+  var groups=fusableGroups();
+  if(groups.length===0){
+    listEl.innerHTML='<div style="font-size:11px; opacity:0.7; padding:10px 0;">배치된 타워가 없습니다. 같은 타워를 3개 배치하면 여기에 표시됩니다.</div>';
+    return;
+  }
+  listEl.innerHTML=groups.map(function(g){
+    var ready=g.towers.length>=3;
+    var afterStat = '공격력 +'+((g.grade+1)*15)+'% · 사거리 +'+((g.grade+1)*5)+'%';
+    return '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(255,255,255,0.08); border-radius:8px; padding:8px 10px; '+(ready?'':'opacity:0.55;')+'">'
+      +'<div style="text-align:left;">'
+        +'<div style="font-size:12px; font-weight:600;"><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:'+g.color+'; margin-right:5px;"></span>'+g.name+' F'+g.grade+' <span style="opacity:0.7; font-weight:400;">x'+g.towers.length+'개</span></div>'
+        +'<div style="font-size:9.5px; opacity:0.7; margin-top:2px;">'+(ready? ('합성 시 → F'+(g.grade+1)+' ('+afterStat+')') : ('3개 필요 (현재 '+g.towers.length+'개)'))+'</div>'
+      +'</div>'
+      +(ready? '<button class="tdFuseGroupBtn" data-kind="'+g.kind+'" data-grade="'+g.grade+'" style="flex-shrink:0; padding:8px 12px; font-size:11px;">합성</button>' : '')
+    +'</div>';
+  }).join('');
+  listEl.querySelectorAll('.tdFuseGroupBtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      fuseGroup(btn.dataset.kind, parseInt(btn.dataset.grade,10));
+    });
+  });
+}
+function openFusion(){
+  prevPaused=G.paused;
+  G.paused=true;
+  renderFusionOverlay();
+  document.getElementById('tdFusionOverlay').style.display='flex';
+}
+function closeFusion(){
+  document.getElementById('tdFusionOverlay').style.display='none';
+  G.paused=prevPaused;
 }
 
 function abilityLines(kind, def){
@@ -2316,12 +2381,11 @@ document.getElementById('tdPauseBtn').addEventListener('click', function(){
 document.getElementById('tdFusionBtn').addEventListener('click', function(){
   if(pauseBlocked()) return;
   hideTowerPopup();
-  G.fusionMode=!G.fusionMode;
-  G.fusionSelection=[];
   G.placeType=null; G.selectedTower=null;
-  this.classList.toggle('tdActive', G.fusionMode);
   updateSelInfo();
+  openFusion();
 });
+document.getElementById('tdFusionCloseBtn').addEventListener('click', closeFusion);
 document.getElementById('tdLabBtn').addEventListener('click', function(){
   ensureAudio();
   if(pauseBlocked()) return;
