@@ -668,6 +668,45 @@ function clearInProgressGame(){
   if(!currentUser || !fbReady()) return;
   firebase.database().ref('users/'+currentUser.uid+'/inProgress').remove().catch(function(e){});
 }
+function triggerGameOver(forced){
+  G.gameOver=true;
+  clearInProgressGame();
+  sessionBest=Math.max(sessionBest,G.wave);
+  var earned=Math.floor(G.wave*0.6+G.totalKills*0.02);
+  researchPoints+=earned;
+  var prevLevel=levelFromXP(userXP);
+  userXP+=earned;
+  saveLocalXP();
+  scheduleSync();
+  refreshLevelUI();
+  var newLevel=levelFromXP(userXP);
+  var levelUpHtml = newLevel>prevLevel ? ('<br><span style="color:#F0B90B;">레벨 업! Lv'+newLevel+' 달성 (최대 '+maxSkipWaveForLevel(newLevel)+'웨이브까지 스킵 가능)</span>') : '';
+  overlayTitle.textContent='게임 오버';
+  overlaySub.innerHTML='도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml;
+  G.finalWave=G.wave; G.finalKills=G.totalKills;
+  if(G.battleMode && battleRoomCode){
+    pushBattleProgress();
+    if(!forced){
+      checkBattleFinish(battleRoomCode);
+      overlaySub.innerHTML+='<br><span style="opacity:0.75; font-size:10px;">대결 결과를 기다리는 중...</span>';
+    }
+  }
+  rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록';
+  overlay.style.display='flex';
+  hideTowerPopup();
+  sfxGameOver();
+  if(currentUser && currentNickname){
+    rankNameInput.value=currentNickname;
+    rankNameInput.disabled=true;
+    rankSubmitBtn.style.display='none';
+    rankSubmitMsg.textContent='계정 닉네임('+currentNickname+')으로 자동 등록 중...';
+    submitRankResult(currentNickname);
+  } else {
+    rankNameInput.disabled=false;
+    rankNameInput.value='';
+    rankSubmitBtn.style.display='';
+  }
+}
 function applyResume(snap){
   resetGame();
   G.wave=snap.wave||0;
@@ -804,12 +843,20 @@ function checkBattleFinish(code){
     var room=snap.val();
     if(!room || room.status==='finished') return;
     var hp=room.hostProgress, gp=room.guestProgress;
-    if(hp && gp && hp.alive===false && gp.alive===false && battleIsHost){
-      var winnerUid=null;
+    var hostDone = hp && hp.alive===false;
+    var guestDone = gp && gp.alive===false;
+    if(!hostDone && !guestDone) return;
+    if(!battleIsHost) return;
+    var winnerUid=null;
+    if(hostDone && guestDone){
       if(hp.wave>gp.wave || (hp.wave===gp.wave && hp.kills>gp.kills)) winnerUid=room.host.uid;
       else if(gp.wave>hp.wave || (gp.wave===hp.wave && gp.kills>hp.kills)) winnerUid=room.guest.uid;
-      ref.update({status:'finished', winnerUid:winnerUid});
+    } else if(hostDone){
+      winnerUid=room.guest.uid;
+    } else {
+      winnerUid=room.host.uid;
     }
+    ref.update({status:'finished', winnerUid:winnerUid});
   });
 }
 function cleanupBattleListeners(){
@@ -819,6 +866,9 @@ function cleanupBattleListeners(){
 function handleBattleRoomFinished(room){
   if(G.battleFinalized) return;
   G.battleFinalized=true;
+  if(!G.gameOver){
+    triggerGameOver(true);
+  }
   var myUid=currentUser? currentUser.uid : null;
   var iWon = room.winnerUid && room.winnerUid===myUid;
   var isDraw = !room.winnerUid;
@@ -835,7 +885,7 @@ function handleBattleRoomFinished(room){
     sub.parentNode.insertBefore(extra, sub.nextSibling);
   }
   extra.innerHTML='<div style="font-size:16px; font-weight:800; color:'+resultColor+';">'+resultText+'</div>'
-    +'<div style="font-size:11px; margin-top:4px;">나: 웨이브 '+fmt(myP?myP.wave:0)+' · 상대('+(battleOpponentNick||'상대')+'): 웨이브 '+fmt(oppP?oppP.wave:0)+'</div>';
+    +'<div style="font-size:11px; margin-top:4px;">나: 웨이브 '+fmt(myP?myP.wave:G.wave)+' · 상대('+(battleOpponentNick||'상대')+'): 웨이브 '+fmt(oppP?oppP.wave:0)+'</div>';
   document.getElementById('tdBattleHud').style.display='none';
   cleanupBattleListeners();
 }
@@ -1446,41 +1496,7 @@ function update(dt){
   }
   G.enemies=G.enemies.filter(function(e){ return e.alive; });
   if(G.lives<=0 && !G.gameOver){
-    G.gameOver=true;
-    clearInProgressGame();
-    sessionBest=Math.max(sessionBest,G.wave);
-    var earned=Math.floor(G.wave*0.6+G.totalKills*0.02);
-    researchPoints+=earned;
-    var prevLevel=levelFromXP(userXP);
-    userXP+=earned;
-    saveLocalXP();
-    scheduleSync();
-    refreshLevelUI();
-    var newLevel=levelFromXP(userXP);
-    var levelUpHtml = newLevel>prevLevel ? ('<br><span style="color:#F0B90B;">레벨 업! Lv'+newLevel+' 달성 (최대 '+maxSkipWaveForLevel(newLevel)+'웨이브까지 스킵 가능)</span>') : '';
-    overlayTitle.textContent='게임 오버';
-    overlaySub.innerHTML='도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml;
-    G.finalWave=G.wave; G.finalKills=G.totalKills;
-    if(G.battleMode && battleRoomCode){
-      pushBattleProgress();
-      checkBattleFinish(battleRoomCode);
-      overlaySub.innerHTML+='<br><span style="opacity:0.75; font-size:10px;">대결 결과를 기다리는 중...</span>';
-    }
-    rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록';
-    overlay.style.display='flex';
-    hideTowerPopup();
-    sfxGameOver();
-    if(currentUser && currentNickname){
-      rankNameInput.value=currentNickname;
-      rankNameInput.disabled=true;
-      rankSubmitBtn.style.display='none';
-      rankSubmitMsg.textContent='계정 닉네임('+currentNickname+')으로 자동 등록 중...';
-      submitRankResult(currentNickname);
-    } else {
-      rankNameInput.disabled=false;
-      rankNameInput.value='';
-      rankSubmitBtn.style.display='';
-    }
+    triggerGameOver();
   }
 
   var R=TILE*0.31;
