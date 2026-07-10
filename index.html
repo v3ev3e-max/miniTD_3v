@@ -1223,7 +1223,10 @@ function update(dt){
 
     t.cooldown-=sdt*1000;
 
-    if(best && t.cooldown<=0 && Math.abs(angDiff(t.angle,desired))<0.35){
+    if(best && t.cooldown<=0){
+      if(Math.abs(angDiff(t.angle,desired))>0.55){
+        continue;
+      }
       var tip={x:t.px+Math.cos(t.angle)*R*1.5, y:t.py+Math.sin(t.angle)*R*1.5};
       spawnFlash(tip.x,tip.y,t.color);
       sfxShoot(t.kind);
