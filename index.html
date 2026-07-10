@@ -1,10 +1,19 @@
 
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
-html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s ease; }
+html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s ease; overflow-x:hidden; }
+#tdRoot{ padding-left:max(0px, env(safe-area-inset-left)); padding-right:max(0px, env(safe-area-inset-right)); padding-bottom:max(0px, env(safe-area-inset-bottom)); padding-top:max(0px, env(safe-area-inset-top)); }
 #tdRoot *{box-sizing:border-box;}
 #tdRoot button{cursor:pointer; font-family:inherit;}
+.tdCtrlBtn .tdCtrlLabel{ word-break:keep-all; overflow-wrap:break-word; text-align:center; line-height:1.25; }
+@media (max-width:380px){
+  .tdCtrlBtn{ font-size:9px; padding:8px 3px; gap:3px; }
+  .tdTowerChip{ min-width:56px; padding:6px 4px 5px; }
+}
+@media (max-width:340px){
+  .tdCtrlBtn{ font-size:8.3px; padding:7px 2px; }
+}
 #tdFusionOverlay.tdBattleCompact, #tdPassiveOverlay.tdBattleCompact{ inset:auto !important; top:6px; left:6px; right:6px; bottom:auto; width:auto; max-height:70%; background:rgba(10,12,18,0.72) !important; border-radius:12px; border:1px solid rgba(233,69,96,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.5); }
 .tdCtrlBtn{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:10px 4px; border-radius:12px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-primary); font-size:10.5px; font-weight:500; transition:transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease, border-color 0.15s ease; width:100%; height:100%;}
 .tdCtrlBtn:hover{ transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,0.18); }
@@ -33,7 +42,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
 .tdPopSell{ background:#E0672B; color:#fff; }
 .tdPopClose{ flex:0 0 32px; background:var(--surface-1); color:var(--text-secondary); border:1px solid var(--border) !important; }
 </style>
-<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">경로를 따라오는 적을 10종의 타워로 막으며 최대한 오래 생존하는 무한 웨이브 타워 디펜스 게임입니다. 웨이브 80부터 두 번째 진입로가 열립니다.</h2>
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">경로를 따라오는 적을 여러 종의 타워로 막으며 최대한 오래 생존하는 무한 웨이브 타워 디펜스 게임입니다. 매 판마다 경로가 무작위로 바뀝니다.</h2>
 
 <div id="tdRoot" style="max-width:680px; margin:0 auto; display:flex; flex-direction:column; gap:9px; border-radius:14px; transition:background 0.2s ease, padding 0.2s ease;">
 
@@ -235,9 +244,9 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
     <div id="tdTowerGrid" style="display:inline-flex; gap:6px;"></div>
   </div>
 
-  <div id="tdLegend" style="display:flex; flex-wrap:wrap; gap:6px; font-size:9px; color:var(--text-secondary);"></div>
+  <div id="tdLegend" style="display:flex; flex-wrap:wrap; font-size:9.5px; color:var(--text-secondary); line-height:1.6;"></div>
 
-  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); gap:6px;">
     <button id="tdSpeedBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdSpeedIcon"></span><span class="tdCtrlLabel">배속 전환</span></button>
     <button id="tdPauseBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdPauseIcon"></span><span class="tdCtrlLabel">일시정지</span></button>
     <button id="tdZoomBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdZoomIcon"></span><span class="tdCtrlLabel">확대 1.0x</span></button>
@@ -330,8 +339,6 @@ function fmt(n){
   }
   return num.toLocaleString('ko-KR');
 }
-
-var LINE2_WAVE=80;
 
 var ICONS={
   speed:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 5v14l9-7z"/><path d="M13 5v14l9-7z"/></svg>',
@@ -585,6 +592,55 @@ var SONGS=[
       [5.5,164.81,0.22],[6.25,130.81,0.14],[7,196,0.22],[7.75,164.81,0.14]
     ],
     hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
+  },
+  { // Song E - 잔잔한 앰비언트 (마이너 펜타토닉, 여백 많음)
+    melody:[
+      [0,440,0.4],[1.5,523.25,0.3],[3,392,0.35],[4.5,440,0.3],[6,587.33,0.35],[7,523.25,0.3]
+    ],
+    bass:[
+      [0,110,0.5],[2,110,0.3],[4,110,0.5],[6,130.81,0.4]
+    ],
+    hat:[2,6]
+  },
+  { // Song F - 질주감 있는 에너지틱 그루브
+    melody:[
+      [0,659.25,0.12],[0.5,783.99,0.1],[1,659.25,0.12],[1.5,587.33,0.1],
+      [2,659.25,0.12],[2.5,783.99,0.1],[3,880,0.14],[3.5,783.99,0.1],
+      [4,659.25,0.12],[4.5,783.99,0.1],[5,659.25,0.12],[5.5,587.33,0.1],
+      [6,880,0.16],[6.5,987.77,0.14],[7,880,0.12],[7.5,783.99,0.1]
+    ],
+    bass:[
+      [0,164.81,0.18],[0.5,164.81,0.12],[1,164.81,0.18],[1.5,164.81,0.12],
+      [2,196,0.18],[2.5,196,0.12],[3,220,0.18],[3.5,220,0.12],
+      [4,164.81,0.18],[4.5,164.81,0.12],[5,164.81,0.18],[5.5,164.81,0.12],
+      [6,174.61,0.18],[6.5,174.61,0.12],[7,196,0.18],[7.5,196,0.12]
+    ],
+    hat:[0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25,5.75,6.25,6.75,7.25,7.75]
+  },
+  { // Song G - 통통 튀는 스타카토 멜로디
+    melody:[
+      [0,783.99,0.08],[0.25,659.25,0.08],[0.5,783.99,0.08],[0.75,987.77,0.08],
+      [1,880,0.1],[1.5,783.99,0.08],[2,659.25,0.08],[2.25,783.99,0.08],
+      [2.5,880,0.08],[2.75,1046.5,0.08],[3,987.77,0.12],
+      [4,783.99,0.08],[4.25,659.25,0.08],[4.5,783.99,0.08],[4.75,987.77,0.08],
+      [5,880,0.1],[5.5,783.99,0.08],[6,659.25,0.08],[6.25,783.99,0.08],
+      [6.5,880,0.08],[6.75,1046.5,0.08],[7,1174.66,0.14]
+    ],
+    bass:[
+      [0,196,0.2],[1,196,0.14],[2,220,0.2],[3,246.94,0.14],
+      [4,196,0.2],[5,196,0.14],[6,220,0.2],[7,246.94,0.16]
+    ],
+    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
+  },
+  { // Song H - 긴장감 있는 마이너 무드
+    melody:[
+      [0,349.23,0.3],[1,415.30,0.25],[2,349.23,0.3],[3,392,0.25],
+      [4,349.23,0.3],[5,415.30,0.25],[6,466.16,0.3],[7,392,0.3]
+    ],
+    bass:[
+      [0,87.31,0.35],[2,92.5,0.3],[4,87.31,0.35],[6,98,0.3]
+    ],
+    hat:[1,3,5,7]
   }
 ];
 var BARS_PER_SONG=6;
@@ -625,10 +681,14 @@ var TOWER_DEFS={
   obelisk:{name:'오벨리스크', cost:6500, dmg:8, range:130, rate:1300, obelisk:true, obeliskCooldownMs:50000, obeliskStunMs:3000, unlockWave:20, color:'#9B59B6', dark:'#3F2251'},
   laser:{name:'레이저', cost:15000, dmg:80, range:175, rate:430, pierce:true, color:'#E24B4A', dark:'#8C1F1F'},
   plasma:{name:'플라즈마', cost:30000, dmg:200, range:125, rate:900, splash:100, color:'#D1479B', dark:'#832C61'},
-  blackhole:{name:'블랙홀', cost:50000, dmg:50, range:135, rate:350, pullStrength:58, color:'#4A2E7A', dark:'#1C1230'},
+  blackhole:{name:'블랙홀', cost:50000, dmg:50, range:135, rate:350, pullStrength:35, color:'#4A2E7A', dark:'#1C1230'},
   nova:{name:'초신성', cost:120000, dmg:700, range:150, rate:1100, splash:140, unlockWave:50, color:'#FF3864', dark:'#7A0F27'}
 };
 
+function easeOutBack(x){
+  var c1=1.70158, c3=c1+1;
+  return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);
+}
 function lightenColor(hex, amt){
   hex=(hex||'#888888').replace('#','');
   if(hex.length===3) hex=hex.split('').map(function(c){ return c+c; }).join('');
@@ -659,6 +719,13 @@ function drawTowerBody(t, R, bw, barrelLen, barrelW){
   var vis=TOWER_VISUALS[t.kind]||{barrels:1, barrelWMult:1, barrelLenMult:1, tip:'circle'};
   ctx.save();
   ctx.translate(t.px,t.py);
+  // 건설 시 팝인 애니메이션 (탄성 있게 커지며 등장)
+  if(t.buildAnimT>0){
+    var bp=1-(t.buildAnimT/350);
+    var s=0.3+0.7*easeOutBack(Math.min(1,bp));
+    ctx.scale(Math.max(0.05,s), Math.max(0.05,s));
+    ctx.globalAlpha=Math.min(1, bp*1.6);
+  }
   // 바닥 그림자
   ctx.globalAlpha=0.28;
   ctx.beginPath(); ctx.ellipse(1.5,bw*0.44,bw*0.52,bw*0.2,0,0,Math.PI*2);
@@ -725,6 +792,14 @@ function drawTowerBody(t, R, bw, barrelLen, barrelW){
   ctx.beginPath(); ctx.arc(0,0,R*0.4,0,Math.PI*2);
   ctx.fillStyle=hubGrad; ctx.fill();
   ctx.strokeStyle=t.dark; ctx.lineWidth=1; ctx.stroke();
+  // 업그레이드 시 잠깐 반짝이는 링
+  if(t.upgradeFlashT>0){
+    ctx.globalAlpha=Math.max(0,t.upgradeFlashT/300)*0.75;
+    ctx.beginPath(); ctx.arc(0,0,bw*0.85,0,Math.PI*2);
+    ctx.strokeStyle='#FFE066'; ctx.lineWidth=3;
+    ctx.stroke();
+    ctx.globalAlpha=1;
+  }
   ctx.restore();
 }
 
@@ -1515,12 +1590,16 @@ async function loadOrInitSave(user, nickHint){
 var sessionBest=0;
 var prevPaused=false;
 
-var waypointsGridA=[[-1,3],[5,3],[5,1],[10,1],[10,6],[14,6],[14,2],[18,2],[18,5],[20,5]];
-var waypointsGridB=[[-1,10],[5,10],[5,8],[9,8],[9,13],[13,13],[13,9],[17,9],[17,12],[20,12]];
-var waypointsA=waypointsGridA.map(function(p){return {x:p[0]*TILE+TILE/2, y:p[1]*TILE+TILE/2};});
-var waypointsB=waypointsGridB.map(function(p){return {x:p[0]*TILE+TILE/2, y:p[1]*TILE+TILE/2};});
-function wpsOf(en){ return en.line===1? waypointsB : waypointsA; }
-
+// 매 판 시작 시 아래 중 하나를 무작위로 골라 그 판의 유일한 경로로 사용
+// 전부 맵 중앙 대역을 가로지르도록 설계해 특정 구석(위/아래 끝)으로만 몰리지 않게 함 (경로 길이는 서로 0~4칸 차이)
+var PATH_VARIANTS=[
+  [[-1,2],[4,2],[4,12],[8,12],[8,9],[12,9],[12,11],[16,11],[16,9],[20,9]],   // 38칸, y 2~12
+  [[-1,12],[4,12],[4,3],[8,3],[8,5],[12,5],[12,4],[16,4],[16,7],[20,7]],    // 36칸, y 3~12
+  [[-1,13],[4,13],[4,6],[8,6],[8,4],[12,4],[12,8],[16,8],[16,11],[20,11]], // 37칸, y 4~13
+  [[-1,13],[4,13],[4,3],[9,3],[9,6],[12,6],[12,3],[16,3],[16,5],[20,5]],   // 39칸, y 3~13
+  [[-1,12],[4,12],[4,4],[8,4],[8,7],[12,7],[12,5],[16,5],[16,6],[20,6]]    // 35칸, y 4~12
+];
+var waypointsGrid, waypoints, pathCells, flowArrows;
 function buildPathSet(grid){
   var set={};
   for(var i=0;i<grid.length-1;i++){
@@ -1538,17 +1617,13 @@ function buildPathSet(grid){
   }
   return set;
 }
-var pathCellsA=buildPathSet(waypointsGridA);
-var pathCellsB=buildPathSet(waypointsGridB);
-function isPathA(gx,gy){ return !!pathCellsA[gx+','+gy]; }
-function isPathB(gx,gy){ return !!pathCellsB[gx+','+gy]; }
-function isPath(gx,gy){ return isPathA(gx,gy)||isPathB(gx,gy); }
+function isPath(gx,gy){ return !!pathCells[gx+','+gy]; }
 function inBounds(gx,gy){ return gx>=0&&gx<COLS&&gy>=0&&gy<ROWS; }
 
-function buildFlowArrows(waypoints){
+function buildFlowArrows(wps){
   var arrows=[];
-  for(var i=0;i<waypoints.length-1;i++){
-    var a=waypoints[i], b=waypoints[i+1];
+  for(var i=0;i<wps.length-1;i++){
+    var a=wps[i], b=wps[i+1];
     var dx=b.x-a.x, dy=b.y-a.y;
     var len=Math.sqrt(dx*dx+dy*dy);
     var angle=Math.atan2(dy,dx);
@@ -1559,8 +1634,14 @@ function buildFlowArrows(waypoints){
   }
   return arrows;
 }
-var flowArrowsA=buildFlowArrows(waypointsA);
-var flowArrowsB=buildFlowArrows(waypointsB);
+function setupRandomPath(){
+  waypointsGrid=PATH_VARIANTS[Math.floor(Math.random()*PATH_VARIANTS.length)];
+  waypoints=waypointsGrid.map(function(p){ return {x:p[0]*TILE+TILE/2, y:p[1]*TILE+TILE/2}; });
+  pathCells=buildPathSet(waypointsGrid);
+  flowArrows=buildFlowArrows(waypoints);
+}
+setupRandomPath();
+function wpsOf(en){ return waypoints; }
 function drawFlowArrow(a){
   ctx.save();
   ctx.translate(a.x,a.y); ctx.rotate(a.angle);
@@ -1918,6 +1999,7 @@ function resetGame(forBattle){
   G.battleMode=!!forBattle;
   G.cpuMode=false; G.cpu=null; G.battleFinalized=false; G.battleReconnectActive=false;
   G.testMode=false;
+  setupRandomPath();
   var tp=document.getElementById('tdTestPanel'); if(tp) tp.style.display='none';
   var bh=document.getElementById('tdBattleHud'); if(bh) bh.style.display='none';
   var bre=document.getElementById('tdBattleResultExtra'); if(bre) bre.remove();
@@ -1930,7 +2012,7 @@ function resetGame(forBattle){
   G.state='intermission'; G.intermissionTimer=5000;
   G.spawnGap=600; G.remainingToSpawn=0; G.spawnTimer=0; G.bossQueued=false; G.miniBossQueued=false;
   G.crateWave=0; G.crateSpawned=false; G.bossFocus=false; G.lastPlacement=null;
-  G.enemies=[]; G.towers={}; G.projectiles=[]; G.particles=[]; G.rings=[]; G.floaters=[]; G.lasers=[];
+  G.enemies=[]; G.towers={}; G.projectiles=[]; G.particles=[]; G.rings=[]; G.floaters=[]; G.lasers=[]; G.floatersSuppressed=false;
   G.selectedTower=null; G.placeType=null; G.hoverCell=null;
   G.fusionMode=false; G.fusionSelection=[];
   G.speedMult=1; G.paused=true; G.manualPause=false; G.gameOver=false; G.choosing=false;
@@ -1974,6 +2056,7 @@ function waveComposition(wave){
       1.0;
 
   var baseCount = 6 + Math.floor(wave * growth);
+  if(wave>=80) baseCount = Math.round(baseCount*0.85); // 블랙홀 너프 보정 + 프레임 안정화: 80웨이브부터 몬스터 수 15% 감소
 
   var count = isBoss
       ? Math.max(3, Math.floor(baseCount*0.4))
@@ -2001,10 +2084,9 @@ function beginWave(){
   G.miniBossQueued=comp.isMiniBoss;
   G.spawnGap=Math.max(120, Math.floor(30000/comp.count));
   G.state='spawning'; G.spawnTimer=0;
-  var text = G.wave===LINE2_WAVE? ('웨이브 '+G.wave+' - 보스 출현 + 2번째 진입로 활성화') : (comp.isBoss? ('웨이브 '+G.wave+' - 보스 출현') : (comp.isMiniBoss? ('웨이브 '+G.wave+' - 미니보스 출현') : ('웨이브 '+G.wave)));
-  G.waveBanner={text:text, life: G.wave===LINE2_WAVE?2600:1700, maxLife: G.wave===LINE2_WAVE?2600:1700, boss:comp.isBoss||comp.isMiniBoss};
+  var text = comp.isBoss? ('웨이브 '+G.wave+' - 보스 출현') : (comp.isMiniBoss? ('웨이브 '+G.wave+' - 미니보스 출현') : ('웨이브 '+G.wave));
+  G.waveBanner={text:text, life:1700, maxLife:1700, boss:comp.isBoss||comp.isMiniBoss};
   sfxWaveStart(comp.isBoss);
-  if(G.wave===LINE2_WAVE) sfxLine2();
   updateHUD();
   refreshTowerButtonLabels();
 }
@@ -2023,11 +2105,12 @@ function spawnOneEnemy(){
   var isBoss = G.bossQueued && G.remainingToSpawn===1;
   var isMiniBoss = !isBoss && G.miniBossQueued && G.remainingToSpawn===1;
   var isCrate = !isBoss && !isMiniBoss && !G.crateSpawned && wave===G.crateWave && G.remainingToSpawn===1;
-  var baseHp = 100*Math.pow(1.15, wave-1);
+  // 초반(1~15웨이브)은 +10%/웨이브로 완만하게, 이후 표준 +15%/웨이브로 전환 (블랙홀 너프로 인한 초반 체감 난이도 상승 완화)
+  var baseHp = (wave<=15 ? 100*Math.pow(1.10, wave-1) : 100*Math.pow(1.10,14)*Math.pow(1.15, wave-15)) * (wave>=60 ? 0.875 : 1); // 블랙홀 너프 보정: 60웨이브부터 체력 12.5% 추가 감소
   var baseSpeed = Math.min(140, 42+wave*0.9);
   var baseReward = 5*Math.pow(1.15, wave-1);
-  var line = (!isBoss && wave>=LINE2_WAVE && Math.random()<0.5) ? 1 : 0;
-  var wps = line===1? waypointsB : waypointsA;
+  var line = 0;
+  var wps = waypoints;
   if(isCrate){
     G.crateSpawned=true;
     var chp=Math.round(baseHp*0.3);
@@ -2041,7 +2124,7 @@ function spawnOneEnemy(){
     return;
   }
   if(isBoss){
-    var bossMult = Math.min(30, 5+wave*0.13);
+    var bossMult = Math.min(30, 5+wave*0.13) * 0.925; // 블랙홀 너프 보정: 보스 체력 7.5% 감소
     var hp=Math.round(baseHp*bossMult);
     var speed=baseSpeed*0.6;
     var reward=Math.round(baseReward*25);
@@ -2156,7 +2239,19 @@ function pauseBlocked(){
   }
   return false;
 }
+var DAMAGE_FLOATER_HIGH=45; // 이 이상이면 데미지 표시 억제 시작
+var DAMAGE_FLOATER_LOW=30;  // 이 이하로 내려가야 다시 표시 재개
+function shouldShowDamageFloater(){
+  var n=G.enemies.length;
+  if(G.floatersSuppressed){
+    if(n<=DAMAGE_FLOATER_LOW) G.floatersSuppressed=false;
+  } else {
+    if(n>DAMAGE_FLOATER_HIGH) G.floatersSuppressed=true;
+  }
+  return !G.floatersSuppressed;
+}
 function spawnDamageFloater(x,y,dmg,style){
+  if(!shouldShowDamageFloater()) return;
   var jitter=(Math.random()-0.5)*14;
   var crit=style==='crit', poison=style==='poison';
   G.floaters.push({
@@ -2245,6 +2340,10 @@ function update(dt){
   if(G.shakeTime>0) G.shakeTime-=dt*1000;
   if(G.waveBanner){ G.waveBanner.life-=dt*1000; if(G.waveBanner.life<=0) G.waveBanner=null; }
 
+  // 몬스터가 너무 많으면(과부하 방지) 데미지 폰트를 잠시 끄고, 다시 줄어들면 켬 (깜빡임 방지용 히스테리시스)
+  if(G.damageFloatersEnabled && G.enemies.length>45) G.damageFloatersEnabled=false;
+  else if(!G.damageFloatersEnabled && G.enemies.length<30) G.damageFloatersEnabled=true;
+
   if(G.state==='intermission'){
     G.intermissionTimer-=sdt*1000;
     if(G.intermissionTimer<=0) beginWave();
@@ -2329,22 +2428,34 @@ function update(dt){
 
   var R=TILE*0.31;
   var towerKeys=Object.keys(G.towers);
+  // 블랙홀 중첩 제한: 가장 강한 2개까지만 흡입 효과 적용
+  var activeBlackholeKeys={};
+  var blackholeList=towerKeys.map(function(bk){ return G.towers[bk]; }).filter(function(tw){ return tw.kind==='blackhole'; });
+  blackholeList.sort(function(a,b){ return (b.pullStrength||0)-(a.pullStrength||0); });
+  blackholeList.slice(0,2).forEach(function(tw){ activeBlackholeKeys[tw.key]=true; });
   for(var k=0;k<towerKeys.length;k++){
     var t=G.towers[towerKeys[k]];
 
     if(t.stunTime>0){ t.stunTime=Math.max(0,t.stunTime-sdt*1000); }
 
     if(t.obelisk && t.obeliskReadyIn>0){ t.obeliskReadyIn=Math.max(0,t.obeliskReadyIn-sdt*1000); }
+    if(t.buildAnimT>0){ t.buildAnimT=Math.max(0,t.buildAnimT-sdt*1000); }
+    if(t.upgradeFlashT>0){ t.upgradeFlashT=Math.max(0,t.upgradeFlashT-sdt*1000); }
 
-    if(t.stunTime<=0 && t.kind==='blackhole'){
+    if(t.stunTime<=0 && t.kind==='blackhole' && activeBlackholeKeys[t.key]){
       for(var bi=0;bi<G.enemies.length;bi++){
         var ben=G.enemies[bi];
         if(!ben.alive || ben.type==='flying') continue;
         var bdx=t.px-ben.x, bdy=t.py-ben.y;
         var bdist=Math.sqrt(bdx*bdx+bdy*bdy);
         if(bdist<towerRange(t) && bdist>2){
-          ben.x+=bdx/bdist*t.pullStrength*sdt;
-          ben.y+=bdy/bdist*t.pullStrength*sdt;
+          // 보스/미니보스 흡입 저항 + 최소 이동속도 보장(자연 이동거리의 최대 55%까지만 흡입 가능)
+          var resist = ben.isBoss? 0.75 : (ben.type==='miniboss'? 0.5 : 0);
+          var pullAmt=t.pullStrength*sdt*(1-resist);
+          var pullCap=ben.speed*sdt*0.55;
+          if(pullAmt>pullCap) pullAmt=pullCap;
+          ben.x+=bdx/bdist*pullAmt;
+          ben.y+=bdy/bdist*pullAmt;
         }
       }
     }
@@ -2549,12 +2660,9 @@ function render(){
     ctx.translate((Math.random()-0.5)*G.shakeMag, (Math.random()-0.5)*G.shakeMag);
   }
 
-  var line2Active = G.wave>=LINE2_WAVE;
   for(var gy=0;gy<ROWS;gy++){
     for(var gx=0;gx<COLS;gx++){
-      var pa=isPathA(gx,gy), pb=isPathB(gx,gy);
-      if(pa) ctx.fillStyle=COL.path;
-      else if(pb) ctx.fillStyle= line2Active? COL.path : COL.path2Dormant;
+      if(isPath(gx,gy)) ctx.fillStyle=COL.path;
       else ctx.fillStyle=((gx+gy)%2===0)?COL.board:COL.boardAlt;
       ctx.fillRect(gx*TILE,gy*TILE,TILE,TILE);
       ctx.strokeStyle=COL.border; ctx.lineWidth=0.5;
@@ -2563,9 +2671,7 @@ function render(){
   }
 
   ctx.fillStyle=COL.arrow;
-  flowArrowsA.forEach(drawFlowArrow);
-  ctx.fillStyle= line2Active? COL.arrow : 'rgba(120,120,120,0.25)';
-  flowArrowsB.forEach(drawFlowArrow);
+  flowArrows.forEach(drawFlowArrow);
 
   if(G.placeType && G.hoverCell && !G.fusionMode){
     var hc=G.hoverCell;
@@ -2925,7 +3031,8 @@ function performFusion(sel){
   var keep=sel[0];
   keep.fusionGrade=(keep.fusionGrade||0)+1;
   keep.kills=(keep.kills||0)+(sel[1].kills||0)+(sel[2].kills||0);
-  for(var i=1;i<3;i++){ delete G.towers[sel[i].key]; }
+  keep.upgradeFlashT=400;
+  for(var i=1;i<3;i++){ spawnDemolishEffect(sel[i].px, sel[i].py, sel[i].color); delete G.towers[sel[i].key]; }
   spawnParticles(keep.px,keep.py,'#F0B90B',14,110);
   spawnGoldFloater(keep.px, keep.py-24, '합성 완료 F'+keep.fusionGrade);
   sfxFusion();
@@ -3015,7 +3122,7 @@ function abilityLines(kind, def){
   if(def.chain>0) lines.push('연쇄 '+def.chain+'타겟 (전달마다 '+Math.round((1-def.falloff)*100)+'%씩 감쇠)');
   if(def.poisonDps>0) lines.push('도트 '+fmt(Math.round(def.poisonDps))+'/초, '+(def.poisonDur/1000).toFixed(1)+'초 지속');
   if(kind==='laser') lines.push('관통 - 사거리 방향 일직선의 모든 적 동시 타격');
-  if(kind==='blackhole') lines.push('범위 내 모든 적 동시 타격 + 흡입(끌어당김)');
+  if(kind==='blackhole') lines.push('범위 내 모든 적 동시 타격 + 흡입(끌어당김, 최대 2개까지만 중첩 · 보스/미니보스는 저항)');
   if(kind==='nova') lines.push('엔드게임 전용 초대형 스플래시');
   if(def.berserker) lines.push('처치 수에 비례해 영구 공격력 증가 (최대 +300%, 500킬)');
   if(def.obelisk) lines.push('액티브 스킬: 화면의 모든 적을 '+(def.obeliskStunMs/1000)+'초 기절 (쿨다운 '+(def.obeliskCooldownMs/1000)+'초)');
@@ -3221,6 +3328,20 @@ function sfxLucky(){
   playTone(660,0.09,'triangle',0.09); playTone(880,0.09,'triangle',0.09,0.08);
   playTone(1100,0.09,'triangle',0.09,0.16); playTone(1400,0.16,'triangle',0.11,0.24);
 }
+function spawnBuildEffect(x,y,color){
+  G.rings.push({x:x,y:y,r:3,maxR:32,life:380,maxLife:380,color:color});
+  for(var i=0;i<9;i++){
+    var ang=Math.random()*Math.PI*2, spd=25+Math.random()*45;
+    G.particles.push({x:x,y:y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,life:280+Math.random()*180,maxLife:460,color:color,size:2+Math.random()*2.2});
+  }
+}
+function spawnDemolishEffect(x,y,color){
+  G.rings.push({x:x,y:y,r:8,maxR:34,life:400,maxLife:400,color:'rgba(140,140,140,0.55)'});
+  for(var i=0;i<11;i++){
+    var ang=Math.random()*Math.PI*2, spd=18+Math.random()*55;
+    G.particles.push({x:x,y:y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-25,life:380+Math.random()*220,maxLife:600,color:i%2? color:'#5a5a5a',size:2+Math.random()*2.6});
+  }
+}
 function placeTower(gx,gy){
   if(G.manualPause) return;
   var def=TOWER_DEFS[G.placeType];
@@ -3242,10 +3363,12 @@ function placeTower(gx,gy){
     poisonDps:def.poisonDps||0, poisonDur:def.poisonDur||3000,
     pullStrength:def.pullStrength||0,
     berserker:def.berserker||false,
-    obelisk:def.obelisk||false, obeliskCooldownMs:def.obeliskCooldownMs||0, obeliskStunMs:def.obeliskStunMs||0, obeliskReadyIn:0
+    obelisk:def.obelisk||false, obeliskCooldownMs:def.obeliskCooldownMs||0, obeliskStunMs:def.obeliskStunMs||0, obeliskReadyIn:0,
+    buildAnimT:350, upgradeFlashT:0
   };
   G.towers[key]=newTower;
   G.lastPlacement={key:key, ts:Date.now()};
+  spawnBuildEffect(newTower.px, newTower.py, def.color);
   sfxPlace();
   if(Math.random()<0.005){
     applyLuckyLevel5(newTower);
@@ -3266,6 +3389,11 @@ function upgradeTower(t){
   t.range=Math.round(t.range*1.04);
   if(t.poisonDps) t.poisonDps=Math.round(t.poisonDps*1.3);
   if(t.pullStrength) t.pullStrength=Math.round(t.pullStrength*1.1);
+  t.upgradeFlashT=300;
+  for(var ui=0;ui<5;ui++){
+    var uang=Math.random()*Math.PI*2, uspd=20+Math.random()*30;
+    G.particles.push({x:t.px,y:t.py,vx:Math.cos(uang)*uspd,vy:Math.sin(uang)*uspd-15,life:350+Math.random()*150,maxLife:500,color:'#FFE066',size:1.8+Math.random()*1.8});
+  }
   sfxUpgrade();
   updateHUD();
 }
@@ -3274,6 +3402,7 @@ function undoPlacement(t){
   if(G.manualPause) return;
   if(!G.towers[t.key]) return;
   G.money+=t.spent;
+  spawnDemolishEffect(t.px, t.py, t.color);
   delete G.towers[t.key];
   if(G.selectedTower===t) G.selectedTower=null;
   G.lastPlacement=null;
@@ -3285,6 +3414,7 @@ function sellTower(t){
   if(G.manualPause) return;
   var refund=Math.floor(t.spent*0.5);
   G.money+=refund;
+  spawnDemolishEffect(t.px, t.py, t.color);
   delete G.towers[t.key];
   if(G.selectedTower===t) G.selectedTower=null;
   updateHUD(); updateSelInfo();
@@ -3320,6 +3450,15 @@ function applyZoom(z){
 document.getElementById('tdZoomBtn').addEventListener('click', function(){
   var idx=ZOOM_LEVELS.indexOf(currentZoom);
   applyZoom(ZOOM_LEVELS[(idx+1)%ZOOM_LEVELS.length]);
+});
+// 화면 회전/리사이즈 시 확대 레이아웃(캔버스 wrap 높이)이 오래된 값으로 굳어 UI가 겹치는 문제 방지
+var _resizeZoomTimer=null;
+window.addEventListener('resize', function(){
+  clearTimeout(_resizeZoomTimer);
+  _resizeZoomTimer=setTimeout(function(){ applyZoom(currentZoom); }, 150);
+});
+window.addEventListener('orientationchange', function(){
+  setTimeout(function(){ applyZoom(currentZoom); }, 250);
 });
 // 확대 상태에서 스크롤(드래그 이동) 직후의 클릭은 타워 설치로 오작동하지 않도록 억제
 var _recentScrollTimer=null, _recentlyScrolled=false;
@@ -3395,7 +3534,7 @@ var legendEl=document.getElementById('tdLegend');
 var legendData=[['normal','일반'],['armored','중장갑'],['rush','돌진'],['flying','비행'],['regen','재생'],['thief','도둑'],['split','분열'],['ironclad','철갑'],['titan','거인'],['cloner','복제자'],['phantom','은신'],['vampire','흡혈'],['crate','보급상자'],['miniboss','미니보스'],['boss','보스']];
 var legendColors={normal:'#F0997B',armored:'#8A8F98',rush:'#FF6B4A',flying:'#5AC8FA',regen:'#7ED957',thief:'#FFD23F',split:'#C77DD9',ironclad:'#B8C4D9',titan:'#6B4226',cloner:'#FF6FB5',phantom:'#B39DDB',vampire:'#8B0000',crate:'#D4A017',miniboss:'#FF9F1C',boss:'#E24B4A'};
 legendEl.innerHTML=legendData.map(function(l){
-  return '<span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px;height:7px;border-radius:50%;background:'+legendColors[l[0]]+'; display:inline-block;"></span>'+l[1]+'</span>';
+  return '<span style="display:inline-flex; align-items:center; margin:0 9px 5px 0; white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:'+legendColors[l[0]]+'; display:inline-block; margin-right:4px; flex-shrink:0;"></span>'+l[1]+'</span>';
 }).join('');
 
 var MONSTER_DESC={
