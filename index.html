@@ -492,12 +492,12 @@ function stopMusic(){
 var ORDER=['basic','sniper','gatling','missile','explosive','frost','piercer','lightning','poison','laser','plasma','blackhole','nova'];
 var TOWER_DEFS={
   basic:{name:'기본', cost:100, dmg:14, range:95, rate:500, color:'#378ADD', dark:'#185FA5'},
-  sniper:{name:'저격', cost:300, dmg:45, range:230, rate:1100, color:'#6C4FD1', dark:'#3D2A8C'},
-  gatling:{name:'기관총', cost:600, dmg:18, range:90, rate:100, color:'#8A8F98', dark:'#4A4F57'},
+  sniper:{name:'저격', cost:420, dmg:45, range:200, rate:1100, color:'#6C4FD1', dark:'#3D2A8C'},
+  gatling:{name:'기관총', cost:500, dmg:18, range:145, rate:100, color:'#8A8F98', dark:'#4A4F57'},
   missile:{name:'미사일터렛', cost:650, dmg:66, range:120, rate:600, splash:40, airOnly:true, color:'#3ADE8F', dark:'#1B6B44'},
   explosive:{name:'폭발', cost:1200, dmg:80, range:100, rate:750, splash:70, color:'#E0672B', dark:'#93401A'},
   frost:{name:'냉기', cost:2000, dmg:30, range:105, rate:450, slow:0.5, slowDur:1700, color:'#29B6C6', dark:'#146B75'},
-  piercer:{name:'관통포', cost:3000, dmg:40, range:110, rate:500, armorPierce:true, color:'#C9A227', dark:'#6E5610'},
+  piercer:{name:'관통포', cost:3000, dmg:56, range:110, rate:500, armorPierce:true, color:'#C9A227', dark:'#6E5610'},
   lightning:{name:'번개', cost:4000, dmg:55, range:115, rate:580, chain:5, chainRange:95, falloff:0.75, color:'#F0B90B', dark:'#8C6E05'},
   poison:{name:'독', cost:8000, dmg:48, range:100, rate:600, poisonDps:85, poisonDur:3500, color:'#5FA83D', dark:'#34611F'},
   laser:{name:'레이저', cost:15000, dmg:70, range:175, rate:430, pierce:true, color:'#E24B4A', dark:'#8C1F1F'},
@@ -557,6 +557,7 @@ var RESEARCH_DEFS={
 var research={startGold:0,dmg:0,crit:0,goldGain:0,waveReward:0};
 var researchPoints=0;
 var currentUser=null;
+var currentNickname=null;
 var syncTimer=null;
 function nickKey(nick){ return nick.trim().toLowerCase(); }
 async function lookupEmailByNickname(nick){
@@ -711,7 +712,7 @@ function fbReady(){ return !!(window.firebase && firebase.apps && firebase.apps.
 async function fetchLeaderboard(){
   if(!fbReady()) return [];
   try{
-    var snap=await firebase.database().ref(RANK_KEY).limitToLast(200).once('value');
+    var snap=await firebase.database().ref(RANK_KEY).orderByChild('wave').limitToLast(200).once('value');
     var val=snap.val();
     if(!val) return [];
     var list=Object.keys(val).map(function(k){ return val[k]; });
@@ -723,10 +724,36 @@ async function fetchLeaderboard(){
 }
 async function submitScore(name, wave, kills){
   if(!fbReady()) throw new Error('firebase not ready');
+  var key=nickKey(name);
   var entry={name:name, wave:wave, kills:kills, ts:Date.now()};
   if(currentUser) entry.uid=currentUser.uid;
-  await firebase.database().ref(RANK_KEY).push(entry);
-  return fetchLeaderboard();
+  var improved=true;
+  await firebase.database().ref(RANK_KEY+'/'+key).transaction(function(current){
+    if(!current || wave>current.wave || (wave===current.wave && kills>(current.kills||0))){
+      improved=true;
+      return entry;
+    }
+    improved=false;
+    return current;
+  });
+  return {list:await fetchLeaderboard(), improved:improved};
+}
+function submitRankResult(name){
+  if(rankSubmitted) return;
+  rankSubmitted=true;
+  rankSubmitBtn.disabled=true;
+  rankSubmitBtn.textContent='등록 중...';
+  submitScore(name, G.finalWave||0, G.finalKills||0).then(function(res){
+    rankSubmitBtn.textContent='등록 완료';
+    rankSubmitMsg.textContent = res.improved
+      ? '랭킹에 등록되었습니다! ('+name+')'
+      : '이미 더 높은 기록이 등록되어 있습니다. (최고 기록 유지)';
+  }).catch(function(){
+    rankSubmitted=false;
+    rankSubmitBtn.disabled=false;
+    rankSubmitBtn.textContent='랭킹 등록';
+    rankSubmitMsg.textContent='등록에 실패했습니다. 다시 시도해주세요.';
+  });
 }
 function renderRankList(list){
   if(!list || list.length===0){ rankListEl.innerHTML='아직 등록된 기록이 없습니다.'; return; }
@@ -769,7 +796,7 @@ function resetGame(){
   G.critChance=0.08+research.crit*0.01; G.critMult=1.8; G.totalKills=0;
   G.buffAtkSpeed=1; G.buffGold=1; G.buffRange=1; G.buffDiscount=1; G.buffDmg=1; G.specials=[];
   overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none';
-  rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록';
+  rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록'; rankSubmitBtn.style.display=''; rankNameInput.disabled=false; rankNameInput.value='';
   towerPopup.style.display='none'; towerPopup.style.opacity='0';
   startOverlay.style.display='flex';
   document.getElementById('tdPauseBtn').querySelector('.tdCtrlLabel').textContent='일시정지';
@@ -1135,6 +1162,17 @@ function update(dt){
     overlay.style.display='flex';
     hideTowerPopup();
     sfxGameOver();
+    if(currentUser && currentNickname){
+      rankNameInput.value=currentNickname;
+      rankNameInput.disabled=true;
+      rankSubmitBtn.style.display='none';
+      rankSubmitMsg.textContent='계정 닉네임('+currentNickname+')으로 자동 등록 중...';
+      submitRankResult(currentNickname);
+    } else {
+      rankNameInput.disabled=false;
+      rankNameInput.value='';
+      rankSubmitBtn.style.display='';
+    }
   }
 
   var R=TILE*0.31;
@@ -2163,6 +2201,7 @@ authSubmitEl.addEventListener('click', function(){
     authSubmitEl.textContent = authMode==='login'? '로그인' : '가입하기';
     authFormEl.style.display='none';
     authMenuEl.style.display='flex';
+    currentNickname=nick;
     beginOfflinePlay();
     spawnGoldFloater(W/2, 80, nick+'님 환영합니다!');
   }).catch(function(err){
@@ -2277,21 +2316,9 @@ document.getElementById('tdRankBtn').addEventListener('click', openRank);
 document.getElementById('tdOverlayRankBtn').addEventListener('click', openRank);
 document.getElementById('tdRankCloseBtn').addEventListener('click', closeRank);
 document.getElementById('tdRankSubmitBtn').addEventListener('click', function(){
-  if(rankSubmitted) return;
   var name=(rankNameInput.value||'').trim().slice(0,12);
   if(!name){ rankSubmitMsg.textContent='닉네임을 입력해주세요.'; return; }
-  rankSubmitted=true;
-  rankSubmitBtn.disabled=true;
-  rankSubmitBtn.textContent='등록 중...';
-  submitScore(name, G.finalWave||0, G.finalKills||0).then(function(){
-    rankSubmitBtn.textContent='등록 완료';
-    rankSubmitMsg.textContent='랭킹에 등록되었습니다!';
-  }).catch(function(){
-    rankSubmitted=false;
-    rankSubmitBtn.disabled=false;
-    rankSubmitBtn.textContent='랭킹 등록';
-    rankSubmitMsg.textContent='등록에 실패했습니다. 다시 시도해주세요.';
-  });
+  submitRankResult(name);
 });
 rankNameInput.addEventListener('keydown', function(ev){
   if(ev.key==='Enter') document.getElementById('tdRankSubmitBtn').click();
