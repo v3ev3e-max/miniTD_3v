@@ -94,7 +94,8 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       </div>
       <div id="tdLoggedInMenu" style="display:none; flex-direction:column; gap:5px; width:100%; max-width:220px; margin-top:6px;">
         <div style="font-size:12px; opacity:0.9;"><span id="tdLoggedInNick" style="color:#F0B90B; font-weight:700;"></span>님, 환영합니다</div>
-        <button id="tdContinueBtn" style="padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200; box-shadow:0 4px 14px rgba(240,185,11,0.35);">게임 시작</button>
+        <button id="tdResumeBtn" style="display:none; padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#29B6C6,#1D6FA5); color:#fff; box-shadow:0 4px 14px rgba(41,182,198,0.35);">이어하기</button>
+        <button id="tdContinueBtn" style="padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200; box-shadow:0 4px 14px rgba(240,185,11,0.35);">새로 시작</button>
         <button id="tdLogoutBtn" style="padding:7px; font-size:11px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">로그아웃</button>
       </div>
       <div id="tdAuthForm" style="display:none; flex-direction:column; gap:5px; width:100%; max-width:220px; margin-top:6px;">
@@ -624,6 +625,42 @@ async function doLogin(nick, pin){
   await loadOrInitSave(cred.user, nick);
   return cred;
 }
+var pendingResume=null;
+function currentClearedWaveCount(){
+  return G.state==='intermission' ? G.wave : Math.max(0,G.wave-1);
+}
+function saveInProgressGame(){
+  if(!currentUser || !fbReady()) return;
+  if(G.gameOver || G.wave<=0) return;
+  var snap={
+    wave: currentClearedWaveCount(),
+    money:G.money, lives:G.lives, totalKills:G.totalKills,
+    towers:G.towers,
+    buffAtkSpeed:G.buffAtkSpeed, buffGold:G.buffGold, buffRange:G.buffRange, buffDiscount:G.buffDiscount, buffDmg:G.buffDmg,
+    specials:G.specials, critChance:G.critChance, critMult:G.critMult,
+    savedAt:Date.now()
+  };
+  firebase.database().ref('users/'+currentUser.uid+'/inProgress').set(snap).catch(function(e){ console.error('progress save failed', e); });
+}
+function clearInProgressGame(){
+  if(!currentUser || !fbReady()) return;
+  firebase.database().ref('users/'+currentUser.uid+'/inProgress').remove().catch(function(e){});
+}
+function applyResume(snap){
+  resetGame();
+  G.wave=snap.wave||0;
+  G.money=typeof snap.money==='number'? snap.money : G.money;
+  G.lives=typeof snap.lives==='number'? snap.lives : G.lives;
+  G.totalKills=snap.totalKills||0;
+  G.towers=snap.towers||{};
+  G.buffAtkSpeed=snap.buffAtkSpeed||1; G.buffGold=snap.buffGold||1; G.buffRange=snap.buffRange||1;
+  G.buffDiscount=snap.buffDiscount||1; G.buffDmg=snap.buffDmg||1;
+  G.specials=snap.specials||[];
+  if(typeof snap.critChance==='number') G.critChance=snap.critChance;
+  if(typeof snap.critMult==='number') G.critMult=snap.critMult;
+  G.state='intermission'; G.intermissionTimer=5000;
+  updateHUD(); refreshTowerButtonLabels();
+}
 function scheduleSync(){
   saveLocalXP();
   if(!currentUser || !fbReady()) return;
@@ -654,6 +691,17 @@ async function loadOrInitSave(user, nickHint){
     var pSnap=await profileRef.once('value');
     if(!pSnap.val() && nickHint){
       await profileRef.set({nickname:nickHint, createdAt:Date.now()});
+    }
+    var progSnap=await firebase.database().ref('users/'+user.uid+'/inProgress').once('value');
+    var progData=progSnap.val();
+    var resumeBtn=document.getElementById('tdResumeBtn');
+    if(progData && progData.wave>0){
+      pendingResume=progData;
+      resumeBtn.style.display='block';
+      resumeBtn.textContent='이어하기 (웨이브 '+progData.wave+')';
+    } else {
+      pendingResume=null;
+      resumeBtn.style.display='none';
     }
   }catch(e){ console.error('load save failed', e); }
 }
@@ -1118,6 +1166,9 @@ function update(dt){
   var sdt=dt*G.speedMult;
   G.timeAcc+=sdt;
 
+  G.progressSaveAcc=(G.progressSaveAcc||0)+dt;
+  if(G.progressSaveAcc>25){ G.progressSaveAcc=0; saveInProgressGame(); }
+
   if(G.shakeTime>0) G.shakeTime-=dt*1000;
   if(G.waveBanner){ G.waveBanner.life-=dt*1000; if(G.waveBanner.life<=0) G.waveBanner=null; }
 
@@ -1135,6 +1186,7 @@ function update(dt){
       var bonus=Math.round(20*Math.pow(1.12,G.wave-1)*(1+research.waveReward*0.1)*G.buffGold);
       G.money+=bonus;
       spawnGoldFloater(W/2, 66, '웨이브 클리어 +'+fmt(bonus)+'G');
+      saveInProgressGame();
       sfxGold();
       if(G.wave%5===0){
         if(G.autoChoice){ autoPickChoice(); }
@@ -1199,6 +1251,7 @@ function update(dt){
   G.enemies=G.enemies.filter(function(e){ return e.alive; });
   if(G.lives<=0 && !G.gameOver){
     G.gameOver=true;
+    clearInProgressGame();
     sessionBest=Math.max(sessionBest,G.wave);
     var earned=Math.floor(G.wave*0.6+G.totalKills*0.02);
     researchPoints+=earned;
@@ -2248,6 +2301,9 @@ function closePassive(){
 function beginOfflinePlay(){
   refreshLevelUI();
   resetGame();
+  enterGameplay();
+}
+function enterGameplay(){
   ensureAudio();
   startMusic();
   startOverlay.style.display='none';
@@ -2259,9 +2315,17 @@ var loggedInMenuEl=document.getElementById('tdLoggedInMenu');
 var loggedInNickEl=document.getElementById('tdLoggedInNick');
 var currentNickname=null;
 document.getElementById('tdContinueBtn').addEventListener('click', beginOfflinePlay);
+document.getElementById('tdResumeBtn').addEventListener('click', function(){
+  if(!pendingResume) return;
+  refreshLevelUI();
+  applyResume(pendingResume);
+  pendingResume=null;
+  enterGameplay();
+});
 document.getElementById('tdLogoutBtn').addEventListener('click', function(){
   if(fbReady()){ firebase.auth().signOut(); }
-  currentUser=null; currentNickname=null;
+  currentUser=null; currentNickname=null; pendingResume=null;
+  document.getElementById('tdResumeBtn').style.display='none';
   loggedInMenuEl.style.display='none';
   authMenuElRef().style.display='flex';
 });
@@ -2505,6 +2569,11 @@ function refreshLevelUI(){
 document.getElementById('tdSkipSelect').addEventListener('change', function(){
   selectedSkipWave=parseInt(this.value,10)||1;
 });
+
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='hidden') saveInProgressGame();
+});
+window.addEventListener('pagehide', function(){ saveInProgressGame(); });
 
 initIcons();
 applyTheme();
