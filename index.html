@@ -292,7 +292,16 @@ var labOverlay=document.getElementById('tdLabOverlay');
 var passiveOverlay=document.getElementById('tdPassiveOverlay');
 var tdRoot=document.getElementById('tdRoot');
 
-function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+function fmt(n){
+  var num = Math.round(n);
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'm';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  }
+  return num.toLocaleString('ko-KR');
+}
 
 var LINE2_WAVE=80;
 
