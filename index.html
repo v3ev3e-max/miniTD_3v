@@ -96,6 +96,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
         <div style="font-size:12px; opacity:0.9;"><span id="tdLoggedInNick" style="color:#F0B90B; font-weight:700;"></span>님, 환영합니다</div>
         <button id="tdResumeBtn" style="display:none; padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#29B6C6,#1D6FA5); color:#fff; box-shadow:0 4px 14px rgba(41,182,198,0.35);">이어하기</button>
         <button id="tdContinueBtn" style="padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200; box-shadow:0 4px 14px rgba(240,185,11,0.35);">새로 시작</button>
+        <button id="tdBattleOpenBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(233,69,96,0.5); background:rgba(233,69,96,0.12); color:#FF8FA3;">⚔️ 1:1 대결</button>
         <button id="tdLogoutBtn" style="padding:7px; font-size:11px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">로그아웃</button>
       </div>
       <div id="tdAuthForm" style="display:none; flex-direction:column; gap:5px; width:100%; max-width:220px; margin-top:6px;">
@@ -107,6 +108,27 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
         <button id="tdAuthCancel" style="padding:7px; font-size:11px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">취소</button>
       </div>
       <div id="tdAuthMsg" style="min-height:12px; font-size:9.5px; color:#FF9F1C; opacity:0; transition:opacity 0.2s ease;">준비중입니다</div>
+      <div id="tdBattlePanel" style="display:none; flex-direction:column; gap:6px; width:100%; max-width:220px; margin-top:6px;">
+        <div style="font-size:12px; font-weight:600;">⚔️ 1:1 대결</div>
+        <div id="tdBattleMenu" style="display:flex; flex-direction:column; gap:6px;">
+          <button id="tdBattleCreateBtn" style="padding:8px; font-size:12px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#E94560,#8C2E44); color:#fff;">방 만들기</button>
+          <div style="display:flex; gap:4px;">
+            <input id="tdBattleCodeInput" type="text" maxlength="5" placeholder="방 코드 입력" style="flex:1; padding:8px 9px; border-radius:8px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.08); color:#fff; font-size:11px; text-align:center; text-transform:uppercase;">
+            <button id="tdBattleJoinBtn" style="padding:8px 12px; font-size:11px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#E94560,#8C2E44); color:#fff;">참가</button>
+          </div>
+        </div>
+        <div id="tdBattleWaiting" style="display:none; flex-direction:column; gap:6px;">
+          <div style="font-size:10.5px; opacity:0.85;">친구에게 이 코드를 알려주세요</div>
+          <div id="tdBattleCodeDisplay" style="font-size:24px; font-weight:800; letter-spacing:4px; color:#F0B90B;"></div>
+          <div id="tdBattleStatusText" style="font-size:11px; opacity:0.85;">상대를 기다리는 중...</div>
+        </div>
+        <div id="tdBattleError" style="min-height:12px; font-size:9.5px; color:#FF6B6B;"></div>
+        <button id="tdBattleCancelBtn" style="padding:7px; font-size:11px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">나가기</button>
+      </div>
+    </div>
+    <div id="tdBattleHud" style="display:none; position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.65); border:1px solid rgba(233,69,96,0.5); border-radius:8px; padding:5px 9px; font-size:10px; color:#fff; text-align:right; z-index:5; pointer-events:none;">
+      <div style="opacity:0.75;">⚔️ <span id="tdBattleOppNick"></span></div>
+      <div>웨이브 <span id="tdBattleOppWave">0</span> · 생명 <span id="tdBattleOppLives">0</span></div>
     </div>
     <div id="tdOverlay" style="position:absolute; inset:0; display:none; align-items:center; justify-content:flex-start; flex-direction:column; gap:8px; background:rgba(0,0,0,0.6); border-radius:var(--radius); color:#fff; text-align:center; padding:16px 10px; overflow-y:auto;">
       <div style="font-size:16px; font-weight:500; margin-top:6px;" id="tdOverlayTitle">게임 오버</div>
@@ -661,6 +683,170 @@ function applyResume(snap){
   G.state='intermission'; G.intermissionTimer=5000;
   updateHUD(); refreshTowerButtonLabels();
 }
+
+var battleRoomCode=null, battleOpponentUid=null, battleOpponentNick=null, battleIsHost=false;
+var battleRoomListenerRef=null, battleOppListenerRef=null;
+function showBattleError(msg){ document.getElementById('tdBattleError').textContent=msg; }
+function genRoomCode(){
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code='';
+  for(var i=0;i<5;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+async function createBattleRoom(){
+  if(!currentUser){ showBattleError('로그인이 필요합니다.'); return; }
+  showBattleError('');
+  var code=genRoomCode();
+  battleIsHost=true;
+  battleRoomCode=code;
+  G._battleCountdownStarted=false;
+  try{
+    await firebase.database().ref('battleRooms/'+code).set({
+      status:'waiting', createdAt:Date.now(),
+      host:{uid:currentUser.uid, nick:currentNickname||'익명'}
+    });
+  }catch(e){ showBattleError('방 생성에 실패했습니다.'); return; }
+  document.getElementById('tdBattleMenu').style.display='none';
+  document.getElementById('tdBattleWaiting').style.display='flex';
+  document.getElementById('tdBattleCodeDisplay').textContent=code;
+  document.getElementById('tdBattleStatusText').textContent='상대를 기다리는 중...';
+  listenRoom(code);
+}
+async function joinBattleRoom(rawCode){
+  var code=(rawCode||'').trim().toUpperCase();
+  if(!code){ showBattleError('방 코드를 입력해주세요.'); return; }
+  if(!currentUser){ showBattleError('로그인이 필요합니다.'); return; }
+  showBattleError('');
+  try{
+    var ref=firebase.database().ref('battleRooms/'+code);
+    var snap=await ref.once('value');
+    var room=snap.val();
+    if(!room){ showBattleError('존재하지 않는 방 코드입니다.'); return; }
+    if(room.status!=='waiting'){ showBattleError('이미 시작되었거나 종료된 방입니다.'); return; }
+    battleIsHost=false;
+    battleRoomCode=code;
+    G._battleCountdownStarted=false;
+    await ref.update({ guest:{uid:currentUser.uid, nick:currentNickname||'익명'}, status:'ready' });
+  }catch(e){ showBattleError('참가에 실패했습니다.'); return; }
+  document.getElementById('tdBattleMenu').style.display='none';
+  document.getElementById('tdBattleWaiting').style.display='flex';
+  document.getElementById('tdBattleCodeDisplay').textContent=code;
+  document.getElementById('tdBattleStatusText').textContent='곧 시작합니다...';
+  listenRoom(code);
+}
+function listenRoom(code){
+  battleRoomListenerRef=firebase.database().ref('battleRooms/'+code);
+  battleRoomListenerRef.on('value', function(snap){
+    var room=snap.val();
+    if(!room) return;
+    if(battleIsHost && room.status==='ready' && !room.startAt){
+      var startAt=Date.now()+3000;
+      battleRoomListenerRef.update({status:'starting', startAt:startAt});
+      return;
+    }
+    if(room.status==='starting' && room.startAt && !G._battleCountdownStarted){
+      G._battleCountdownStarted=true;
+      var oppInfo = battleIsHost? room.guest : room.host;
+      battleOpponentUid = oppInfo? oppInfo.uid : null;
+      battleOpponentNick = oppInfo? oppInfo.nick : '상대';
+      runBattleCountdown(room.startAt, code);
+    }
+    if(room.status==='finished' && G.battleMode){
+      handleBattleRoomFinished(room);
+    }
+  });
+}
+function runBattleCountdown(startAt, code){
+  var statusEl=document.getElementById('tdBattleStatusText');
+  var iv=setInterval(function(){
+    var remain=Math.ceil((startAt-Date.now())/1000);
+    if(remain<=0){
+      clearInterval(iv);
+      beginBattleGame(code);
+    } else {
+      statusEl.textContent=remain+'초 후 시작!';
+    }
+  }, 200);
+}
+function beginBattleGame(code){
+  document.getElementById('tdBattlePanel').style.display='none';
+  refreshLevelUI();
+  resetGame(true);
+  G.battleFinalized=false;
+  document.getElementById('tdBattleHud').style.display='block';
+  document.getElementById('tdBattleOppNick').textContent=battleOpponentNick||'상대';
+  document.getElementById('tdBattleOppWave').textContent='0';
+  document.getElementById('tdBattleOppLives').textContent='20';
+  enterGameplay();
+  listenOpponentProgress(code);
+}
+function pushBattleProgress(){
+  if(!G.battleMode || !battleRoomCode || !currentUser || !fbReady()) return;
+  var role=battleIsHost? 'hostProgress' : 'guestProgress';
+  firebase.database().ref('battleRooms/'+battleRoomCode+'/'+role).set({
+    wave:G.wave, lives:G.lives, kills:G.totalKills, alive:!G.gameOver, ts:Date.now()
+  }).catch(function(e){});
+}
+function listenOpponentProgress(code){
+  var role=battleIsHost? 'guestProgress' : 'hostProgress';
+  battleOppListenerRef=firebase.database().ref('battleRooms/'+code+'/'+role);
+  battleOppListenerRef.on('value', function(snap){
+    var p=snap.val();
+    if(!p) return;
+    document.getElementById('tdBattleOppWave').textContent=fmt(p.wave||0);
+    document.getElementById('tdBattleOppLives').textContent=fmt(Math.max(0,p.lives||0));
+    if(p.alive===false) checkBattleFinish(code);
+  });
+}
+function checkBattleFinish(code){
+  var ref=firebase.database().ref('battleRooms/'+code);
+  ref.once('value').then(function(snap){
+    var room=snap.val();
+    if(!room || room.status==='finished') return;
+    var hp=room.hostProgress, gp=room.guestProgress;
+    if(hp && gp && hp.alive===false && gp.alive===false && battleIsHost){
+      var winnerUid=null;
+      if(hp.wave>gp.wave || (hp.wave===gp.wave && hp.kills>gp.kills)) winnerUid=room.host.uid;
+      else if(gp.wave>hp.wave || (gp.wave===hp.wave && gp.kills>hp.kills)) winnerUid=room.guest.uid;
+      ref.update({status:'finished', winnerUid:winnerUid});
+    }
+  });
+}
+function cleanupBattleListeners(){
+  if(battleRoomListenerRef){ battleRoomListenerRef.off(); battleRoomListenerRef=null; }
+  if(battleOppListenerRef){ battleOppListenerRef.off(); battleOppListenerRef=null; }
+}
+function handleBattleRoomFinished(room){
+  if(G.battleFinalized) return;
+  G.battleFinalized=true;
+  var myUid=currentUser? currentUser.uid : null;
+  var iWon = room.winnerUid && room.winnerUid===myUid;
+  var isDraw = !room.winnerUid;
+  var myP = battleIsHost? room.hostProgress : room.guestProgress;
+  var oppP = battleIsHost? room.guestProgress : room.hostProgress;
+  var resultText = isDraw? '무승부!' : (iWon? '승리!' : '패배...');
+  var resultColor = isDraw? '#F0B90B' : (iWon? '#8FD16A' : '#FF6B6B');
+  var extra=document.getElementById('tdBattleResultExtra');
+  if(!extra){
+    extra=document.createElement('div');
+    extra.id='tdBattleResultExtra';
+    extra.style.cssText='margin-top:8px; padding:10px; border-radius:10px; background:rgba(233,69,96,0.15); border:1px solid rgba(233,69,96,0.4); width:100%; max-width:280px;';
+    var sub=document.getElementById('tdOverlaySub');
+    sub.parentNode.insertBefore(extra, sub.nextSibling);
+  }
+  extra.innerHTML='<div style="font-size:16px; font-weight:800; color:'+resultColor+';">'+resultText+'</div>'
+    +'<div style="font-size:11px; margin-top:4px;">나: 웨이브 '+fmt(myP?myP.wave:0)+' · 상대('+(battleOpponentNick||'상대')+'): 웨이브 '+fmt(oppP?oppP.wave:0)+'</div>';
+  document.getElementById('tdBattleHud').style.display='none';
+  cleanupBattleListeners();
+}
+function leaveBattlePanel(){
+  cleanupBattleListeners();
+  battleRoomCode=null; battleOpponentUid=null; battleOpponentNick=null;
+  document.getElementById('tdBattlePanel').style.display='none';
+  document.getElementById('tdBattleHud').style.display='none';
+  loggedInMenuEl.style.display='flex';
+}
+
 function scheduleSync(){
   saveLocalXP();
   if(!currentUser || !fbReady()) return;
@@ -874,12 +1060,18 @@ function closeRank(){
 }
 
 var G={};
-function resetGame(){
-  var userLevel=levelFromXP(userXP);
-  var skipWave = Math.min(selectedSkipWave, maxSkipWaveForLevel(userLevel)) || 1;
-  var skipGold = estimateSkipGold(skipWave);
-  var levelGoldBonus = (userLevel-1)*15;
-  G.money=400+research.startGold*50+skipGold+levelGoldBonus; G.lives=20; G.wave=Math.max(0,skipWave-1);
+var BATTLE_NEUTRAL_RESEARCH={startGold:0,dmg:0,crit:0,goldGain:0,waveReward:0};
+function effResearch(){ return G.battleMode ? BATTLE_NEUTRAL_RESEARCH : research; }
+function resetGame(forBattle){
+  G.battleMode=!!forBattle;
+  var bh=document.getElementById('tdBattleHud'); if(bh) bh.style.display='none';
+  var bre=document.getElementById('tdBattleResultExtra'); if(bre) bre.remove();
+  var userLevel=forBattle? 1 : levelFromXP(userXP);
+  var skipWave=forBattle? 1 : (Math.min(selectedSkipWave, maxSkipWaveForLevel(userLevel)) || 1);
+  var skipGold=forBattle? 0 : estimateSkipGold(skipWave);
+  var levelGoldBonus=forBattle? 0 : (userLevel-1)*15;
+  var rsrch=effResearch();
+  G.money=400+rsrch.startGold*50+skipGold+levelGoldBonus; G.lives=20; G.wave=Math.max(0,skipWave-1);
   G.state='intermission'; G.intermissionTimer=5000;
   G.spawnGap=600; G.remainingToSpawn=0; G.spawnTimer=0; G.bossQueued=false; G.miniBossQueued=false;
   G.crateWave=0; G.crateSpawned=false; G.bossFocus=false; G.lastPlacement=null;
@@ -889,7 +1081,7 @@ function resetGame(){
   G.speedMult=1; G.paused=true; G.manualPause=false; G.gameOver=false; G.choosing=false;
   G.autoChoice=false; G.showKillCounts=false;
   G.shakeTime=0; G.shakeMag=0; G.waveBanner=null; G.timeAcc=0;
-  G.critChance=0.08+research.crit*0.01; G.critMult=1.8; G.totalKills=0;
+  G.critChance=0.08+rsrch.crit*0.01; G.critMult=1.8; G.totalKills=0;
   G.buffAtkSpeed=1; G.buffGold=1; G.buffRange=1; G.buffDiscount=1; G.buffDmg=1; G.specials=[];
   overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none'; document.getElementById('tdFusionOverlay').style.display='none';
   rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록'; rankSubmitBtn.style.display=''; rankNameInput.disabled=false; rankNameInput.value='';
@@ -907,10 +1099,10 @@ function resetGame(){
   updateHUD(); updateSelInfo(); refreshTowerButtonLabels();
 }
 
-function towerDamage(t){ return t.dmg*G.buffDmg*(1+(t.fusionGrade||0)*0.15)*(1+research.dmg*0.04); }
+function towerDamage(t){ return t.dmg*G.buffDmg*(1+(t.fusionGrade||0)*0.15)*(1+effResearch().dmg*0.04); }
 function towerRange(t){ return t.range*G.buffRange*(1+(t.fusionGrade||0)*0.05); }
 function towerRate(t){ return t.rate/G.buffAtkSpeed; }
-function goldMult(){ return G.buffGold*(1+research.goldGain*0.08); }
+function goldMult(){ return G.buffGold*(1+effResearch().goldGain*0.08); }
 
 function waveComposition(wave){
   var isBoss = wave%10===0;
@@ -1168,6 +1360,10 @@ function update(dt){
 
   G.progressSaveAcc=(G.progressSaveAcc||0)+dt;
   if(G.progressSaveAcc>25){ G.progressSaveAcc=0; saveInProgressGame(); }
+  if(G.battleMode){
+    G.battlePushAcc=(G.battlePushAcc||0)+dt;
+    if(G.battlePushAcc>3){ G.battlePushAcc=0; pushBattleProgress(); }
+  }
 
   if(G.shakeTime>0) G.shakeTime-=dt*1000;
   if(G.waveBanner){ G.waveBanner.life-=dt*1000; if(G.waveBanner.life<=0) G.waveBanner=null; }
@@ -1183,7 +1379,7 @@ function update(dt){
     if(G.remainingToSpawn<=0){
       G.state='intermission';
       G.intermissionTimer=Math.max(1100, 3000-G.wave*15);
-      var bonus=Math.round(20*Math.pow(1.12,G.wave-1)*(1+research.waveReward*0.1)*G.buffGold);
+      var bonus=Math.round(20*Math.pow(1.12,G.wave-1)*(1+effResearch().waveReward*0.1)*G.buffGold);
       G.money+=bonus;
       spawnGoldFloater(W/2, 66, '웨이브 클리어 +'+fmt(bonus)+'G');
       saveInProgressGame();
@@ -1265,6 +1461,11 @@ function update(dt){
     overlayTitle.textContent='게임 오버';
     overlaySub.innerHTML='도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml;
     G.finalWave=G.wave; G.finalKills=G.totalKills;
+    if(G.battleMode && battleRoomCode){
+      pushBattleProgress();
+      checkBattleFinish(battleRoomCode);
+      overlaySub.innerHTML+='<br><span style="opacity:0.75; font-size:10px;">대결 결과를 기다리는 중...</span>';
+    }
     rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록';
     overlay.style.display='flex';
     hideTowerPopup();
@@ -1900,7 +2101,7 @@ function abilityLines(kind, def){
   if(kind==='nova') lines.push('엔드게임 전용 초대형 스플래시');
   return lines;
 }
-function towerDamageWith(dmgBase, t){ return dmgBase*G.buffDmg*(1+(t.fusionGrade||0)*0.15)*(1+research.dmg*0.04); }
+function towerDamageWith(dmgBase, t){ return dmgBase*G.buffDmg*(1+(t.fusionGrade||0)*0.15)*(1+effResearch().dmg*0.04); }
 function towerRangeWith(rangeBase, t){ return rangeBase*G.buffRange*(1+(t.fusionGrade||0)*0.05); }
 function upgradeStatLines(t){
   var lines=[];
@@ -2322,6 +2523,19 @@ document.getElementById('tdResumeBtn').addEventListener('click', function(){
   pendingResume=null;
   enterGameplay();
 });
+document.getElementById('tdBattleOpenBtn').addEventListener('click', function(){
+  loggedInMenuEl.style.display='none';
+  document.getElementById('tdBattlePanel').style.display='flex';
+  document.getElementById('tdBattleMenu').style.display='flex';
+  document.getElementById('tdBattleWaiting').style.display='none';
+  document.getElementById('tdBattleError').textContent='';
+  document.getElementById('tdBattleCodeInput').value='';
+});
+document.getElementById('tdBattleCreateBtn').addEventListener('click', createBattleRoom);
+document.getElementById('tdBattleJoinBtn').addEventListener('click', function(){
+  joinBattleRoom(document.getElementById('tdBattleCodeInput').value);
+});
+document.getElementById('tdBattleCancelBtn').addEventListener('click', leaveBattlePanel);
 document.getElementById('tdLogoutBtn').addEventListener('click', function(){
   if(fbReady()){ firebase.auth().signOut(); }
   currentUser=null; currentNickname=null; pendingResume=null;
@@ -2458,6 +2672,10 @@ document.getElementById('tdFusionCloseBtn').addEventListener('click', closeFusio
 document.getElementById('tdLabBtn').addEventListener('click', function(){
   ensureAudio();
   if(pauseBlocked()) return;
+  if(G.battleMode){
+    G.waveBanner={text:'대결 모드에서는 연구소를 사용할 수 없습니다', life:1400, maxLife:1400, boss:false};
+    return;
+  }
   if(labOverlay.style.display==='flex') closeLab(); else openLab();
 });
 document.getElementById('tdLabCloseBtn').addEventListener('click', closeLab);
@@ -2490,7 +2708,13 @@ document.getElementById('tdLabResetBtn').addEventListener('click', function(){
   scheduleSync();
 });
 document.getElementById('tdOverlayLabBtn').addEventListener('click', openLab);
-document.getElementById('tdRestartBtn').addEventListener('click', function(){ resetGame(); });
+document.getElementById('tdRestartBtn').addEventListener('click', function(){
+  cleanupBattleListeners();
+  document.getElementById('tdBattleHud').style.display='none';
+  var extra=document.getElementById('tdBattleResultExtra');
+  if(extra) extra.remove();
+  resetGame();
+});
 document.getElementById('tdMusicBtn').addEventListener('click', function(){
   ensureAudio();
   setMusicMuted(!musicMuted);
