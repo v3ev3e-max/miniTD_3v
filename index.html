@@ -97,6 +97,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
         <button id="tdResumeBtn" style="display:none; padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#29B6C6,#1D6FA5); color:#fff; box-shadow:0 4px 14px rgba(41,182,198,0.35);">이어하기</button>
         <button id="tdContinueBtn" style="padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200; box-shadow:0 4px 14px rgba(240,185,11,0.35);">새로 시작</button>
         <button id="tdBattleOpenBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(233,69,96,0.5); background:rgba(233,69,96,0.12); color:#FF8FA3;">⚔️ 1:1 대결</button>
+        <button id="tdTestModeBtn" style="display:none; padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(41,182,198,0.5); background:rgba(41,182,198,0.12); color:#8FD8E8;">🛠 테스트 모드</button>
         <button id="tdLogoutBtn" style="padding:7px; font-size:11px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">로그아웃</button>
       </div>
       <div id="tdAuthForm" style="display:none; flex-direction:column; gap:5px; width:100%; max-width:220px; margin-top:6px;">
@@ -129,6 +130,18 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
     <div id="tdBattleHud" style="display:none; position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.65); border:1px solid rgba(233,69,96,0.5); border-radius:8px; padding:5px 9px; font-size:10px; color:#fff; text-align:right; z-index:5; pointer-events:none;">
       <div style="opacity:0.75;">⚔️ <span id="tdBattleOppNick"></span></div>
       <div>웨이브 <span id="tdBattleOppWave">0</span> · 생명 <span id="tdBattleOppLives">0</span></div>
+    </div>
+    <div id="tdTestPanel" style="display:none; position:absolute; top:6px; left:6px; background:rgba(0,0,0,0.75); border:1px solid rgba(41,182,198,0.5); border-radius:8px; padding:7px 8px; font-size:10px; color:#fff; z-index:5; display:none; flex-direction:column; gap:4px;">
+      <div style="font-weight:700; color:#8FD8E8;">🛠 테스트 모드</div>
+      <div style="display:flex; gap:3px; align-items:center;">
+        <input id="tdTestWaveInput" type="number" min="1" placeholder="웨이브" style="width:52px; padding:3px 4px; border-radius:5px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.1); color:#fff; font-size:10px;">
+        <button id="tdTestWaveBtn" style="padding:3px 6px; font-size:9.5px;">이동</button>
+      </div>
+      <div style="display:flex; gap:3px; align-items:center;">
+        <input id="tdTestGoldInput" type="number" min="0" placeholder="골드" style="width:52px; padding:3px 4px; border-radius:5px; border:0.5px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.1); color:#fff; font-size:10px;">
+        <button id="tdTestGoldBtn" style="padding:3px 6px; font-size:9.5px;">설정</button>
+      </div>
+      <button id="tdTestExitBtn" style="padding:4px 6px; font-size:9.5px; margin-top:2px;">테스트 종료</button>
     </div>
     <div id="tdOverlay" style="position:absolute; inset:0; display:none; align-items:center; justify-content:flex-start; flex-direction:column; gap:8px; background:rgba(0,0,0,0.6); border-radius:var(--radius); color:#fff; text-align:center; padding:16px 10px; overflow-y:auto;">
       <div style="font-size:16px; font-weight:500; margin-top:6px;" id="tdOverlayTitle">게임 오버</div>
@@ -671,18 +684,26 @@ function clearInProgressGame(){
 function triggerGameOver(forced){
   G.gameOver=true;
   clearInProgressGame();
+  pendingResume=null;
+  var resumeBtnEl=document.getElementById('tdResumeBtn');
+  if(resumeBtnEl) resumeBtnEl.style.display='none';
   sessionBest=Math.max(sessionBest,G.wave);
-  var earned=Math.floor(G.wave*0.6+G.totalKills*0.02);
-  researchPoints+=earned;
-  var prevLevel=levelFromXP(userXP);
-  userXP+=earned;
-  saveLocalXP();
-  scheduleSync();
-  refreshLevelUI();
-  var newLevel=levelFromXP(userXP);
-  var levelUpHtml = newLevel>prevLevel ? ('<br><span style="color:#F0B90B;">레벨 업! Lv'+newLevel+' 달성 (최대 '+maxSkipWaveForLevel(newLevel)+'웨이브까지 스킵 가능)</span>') : '';
-  overlayTitle.textContent='게임 오버';
-  overlaySub.innerHTML='도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml;
+  var earned=0, levelUpHtml='';
+  if(!G.testMode){
+    earned=Math.floor(G.wave*0.6+G.totalKills*0.02);
+    researchPoints+=earned;
+    var prevLevel=levelFromXP(userXP);
+    userXP+=earned;
+    saveLocalXP();
+    scheduleSync();
+    refreshLevelUI();
+    var newLevel=levelFromXP(userXP);
+    levelUpHtml = newLevel>prevLevel ? ('<br><span style="color:#F0B90B;">레벨 업! Lv'+newLevel+' 달성 (최대 '+maxSkipWaveForLevel(newLevel)+'웨이브까지 스킵 가능)</span>') : '';
+  }
+  overlayTitle.textContent = G.testMode? '테스트 종료' : '게임 오버';
+  overlaySub.innerHTML = G.testMode
+    ? ('도달한 웨이브: '+G.wave+'<br><span style="opacity:0.7;">테스트 모드 - 기록은 저장되지 않습니다</span>')
+    : ('도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml);
   G.finalWave=G.wave; G.finalKills=G.totalKills;
   if(G.battleMode && battleRoomCode){
     pushBattleProgress();
@@ -695,7 +716,12 @@ function triggerGameOver(forced){
   overlay.style.display='flex';
   hideTowerPopup();
   sfxGameOver();
-  if(currentUser && currentNickname){
+  if(G.testMode || isAdmin()){
+    rankNameInput.disabled=false;
+    rankNameInput.value='';
+    rankSubmitBtn.style.display='none';
+    rankSubmitMsg.textContent = G.testMode? '테스트 모드에서는 랭킹에 등록되지 않습니다.' : '관리자 계정은 랭킹에 등록되지 않습니다.';
+  } else if(currentUser && currentNickname){
     rankNameInput.value=currentNickname;
     rankNameInput.disabled=true;
     rankSubmitBtn.style.display='none';
@@ -806,6 +832,40 @@ function runBattleCountdown(startAt, code){
       statusEl.textContent=remain+'초 후 시작!';
     }
   }, 200);
+}
+function beginTestMode(){
+  if(!isAdmin()) return;
+  refreshLevelUI();
+  resetGame();
+  G.testMode=true;
+  G.money=100000;
+  document.getElementById('tdTestPanel').style.display='flex';
+  document.getElementById('tdTestWaveInput').value=1;
+  document.getElementById('tdTestGoldInput').value=G.money;
+  enterGameplay();
+  updateHUD();
+}
+function testJumpWave(){
+  if(!G.testMode) return;
+  var w=parseInt(document.getElementById('tdTestWaveInput').value,10);
+  if(!w || w<1) return;
+  G.wave=w-1;
+  G.state='intermission'; G.intermissionTimer=1200;
+  G.enemies=[];
+  G.crateWave=0; G.crateSpawned=false;
+  G.waveBanner={text:'테스트: 웨이브 '+w+'로 이동', life:1400, maxLife:1400, boss:false};
+  updateHUD();
+}
+function testSetGold(){
+  if(!G.testMode) return;
+  var g=parseInt(document.getElementById('tdTestGoldInput').value,10);
+  if(isNaN(g) || g<0) return;
+  G.money=g;
+  updateHUD();
+}
+function exitTestMode(){
+  document.getElementById('tdTestPanel').style.display='none';
+  resetGame();
 }
 function beginBattleGame(code){
   document.getElementById('tdBattlePanel').style.display='none';
@@ -1083,6 +1143,7 @@ function submitRankResult(name){
   });
 }
 function renderRankList(list){
+  list = (list||[]).filter(function(e){ return !e.name || ADMIN_NICKNAMES.indexOf(nickKey(e.name))<0; });
   if(!list || list.length===0){ rankListEl.innerHTML='아직 등록된 기록이 없습니다.'; return; }
   var rows=list.map(function(e,i){
     var medal = i===0?'🥇':(i===1?'🥈':(i===2?'🥉':(i+1)+'.'));
@@ -1114,6 +1175,8 @@ var BATTLE_NEUTRAL_RESEARCH={startGold:0,dmg:0,crit:0,goldGain:0,waveReward:0};
 function effResearch(){ return G.battleMode ? BATTLE_NEUTRAL_RESEARCH : research; }
 function resetGame(forBattle){
   G.battleMode=!!forBattle;
+  G.testMode=false;
+  var tp=document.getElementById('tdTestPanel'); if(tp) tp.style.display='none';
   var bh=document.getElementById('tdBattleHud'); if(bh) bh.style.display='none';
   var bre=document.getElementById('tdBattleResultExtra'); if(bre) bre.remove();
   var userLevel=forBattle? 1 : levelFromXP(userXP);
@@ -1538,10 +1601,14 @@ function update(dt){
     }
 
     var desired = best? Math.atan2(best.y-t.py,best.x-t.px) : t.angle+sdt*0.6;
-    var diff=angDiff(t.angle,desired);
-    var maxTurn=sdt*9;
-    if(diff>maxTurn) diff=maxTurn; if(diff<-maxTurn) diff=-maxTurn;
-    t.angle+=diff;
+    if(best){
+      t.angle=desired;
+    } else {
+      var diff=angDiff(t.angle,desired);
+      var maxTurn=sdt*9;
+      if(diff>maxTurn) diff=maxTurn; if(diff<-maxTurn) diff=-maxTurn;
+      t.angle+=diff;
+    }
     if(t.angle>Math.PI) t.angle-=Math.PI*2;
     else if(t.angle<-Math.PI) t.angle+=Math.PI*2;
 
@@ -2539,6 +2606,10 @@ document.getElementById('tdResumeBtn').addEventListener('click', function(){
   pendingResume=null;
   enterGameplay();
 });
+document.getElementById('tdTestModeBtn').addEventListener('click', beginTestMode);
+document.getElementById('tdTestWaveBtn').addEventListener('click', testJumpWave);
+document.getElementById('tdTestGoldBtn').addEventListener('click', testSetGold);
+document.getElementById('tdTestExitBtn').addEventListener('click', exitTestMode);
 document.getElementById('tdBattleOpenBtn').addEventListener('click', function(){
   loggedInMenuEl.style.display='none';
   document.getElementById('tdBattlePanel').style.display='flex';
@@ -2560,11 +2631,14 @@ document.getElementById('tdLogoutBtn').addEventListener('click', function(){
   authMenuElRef().style.display='flex';
 });
 function authMenuElRef(){ return document.getElementById('tdAuthMenu'); }
+var ADMIN_NICKNAMES=['삼브'];
+function isAdmin(){ return currentNickname && ADMIN_NICKNAMES.indexOf(nickKey(currentNickname))>=0; }
 function showLoggedInMenu(nick){
   currentNickname=nick;
   loggedInNickEl.textContent=nick;
   authMenuElRef().style.display='none';
   loggedInMenuEl.style.display='flex';
+  document.getElementById('tdTestModeBtn').style.display=isAdmin()? 'block' : 'none';
 }
 (function waitForFirebaseAuth(){
   if(!fbReady()){ setTimeout(waitForFirebaseAuth, 300); return; }
@@ -2655,6 +2729,7 @@ authSubmitEl.addEventListener('click', function(){
     authFormEl.style.display='none';
     authMenuEl.style.display='flex';
     currentNickname=nick;
+    document.getElementById('tdTestModeBtn').style.display=isAdmin()? 'block' : 'none';
     beginOfflinePlay();
     spawnGoldFloater(W/2, 80, nick+'님 환영합니다!');
   }).catch(function(err){
