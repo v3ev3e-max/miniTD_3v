@@ -224,7 +224,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
     </div>
     <div id="tdFusionOverlay" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; background:rgba(0,0,0,0.85); border-radius:var(--radius); color:#fff; padding:14px 12px; text-align:center; overflow-y:auto;">
       <div style="font-size:14px; font-weight:600;">타워 합성</div>
-      <div style="font-size:10.5px; opacity:0.8; max-width:320px; line-height:1.5;">같은 타워, 같은 등급을 <b style="color:#F0B90B;">3개</b> 모으면 <b style="color:#F0B90B;">1개(공격력 +15%, 사거리 +5%)</b>로 합쳐집니다. 아래 목록에서 바로 합성할 수 있어요.</div>
+      <div style="font-size:10.5px; opacity:0.8; max-width:320px; line-height:1.5;">같은 타워, 같은 등급을 <b style="color:#F0B90B;">3개</b> 모으면 <b style="color:#F0B90B;">1개(공격력 +20%, 사거리 +6%)</b>로 합쳐집니다. <b style="color:#F0B90B;">F5 등급부터는 공격속도도 추가로 빨라집니다.</b> 아래 목록에서 바로 합성할 수 있어요.</div>
       <div id="tdFusionList" style="display:flex; flex-direction:column; gap:6px; width:100%; max-width:340px; margin-top:4px;"></div>
       <button id="tdFusionCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
     </div>
@@ -1471,7 +1471,7 @@ function beginCpuBattle(){
   battleRoomCode=null; battleIsHost=true;
   var rinfo=getRankInfo(cpuRating);
   battlePlayers={}; battlePlayers[cpuUid]={nick:'CPU · '+rinfo.tier.icon+' '+rinfo.tier.name};
-  G.cpu={wave:0, lives:20, kills:0, gold:150, power:0, towers:0, alive:true, waveTimer:2600, params:params};
+  G.cpu={wave:0, lives:20, kills:0, gold:150, power:0, towers:0, alive:true, params:params};
   battleLastProgressSnap={}; battleLastProgressSnap[cpuUid]={wave:0, lives:20, alive:true};
   document.getElementById('tdBattleHud').style.display='block';
   renderOppHud();
@@ -1492,33 +1492,30 @@ function cpuAiSpend(cpu){
     if(logEl){ logEl.style.display='block'; logEl.textContent='CPU: '+action+' (+'+fmt(spend)+'골드)'; }
   }
 }
-function simulateCpuTick(sdt){
+// CPU는 더 이상 자체 타이머로 웨이브를 진행하지 않고, 플레이어의 실제 웨이브 진행에 맞춰 동기화됨
+function cpuAdvanceWave(){
   var cpu=G.cpu;
   if(!cpu || !cpu.alive) return;
-  cpu.waveTimer-=sdt*1000;
-  if(cpu.waveTimer<=0){
-    cpu.wave++;
-    cpu.gold+=Math.round(20*Math.pow(1.14,cpu.wave-1));
-    cpuAiSpend(cpu);
-    var req=40*Math.pow(1.085,cpu.wave);
-    if(cpu.power<req){
-      var shortfall=(req-cpu.power)/req;
-      var loss=Math.max(0, Math.round(shortfall*3-cpu.params.econEff));
-      if(loss>0) cpu.lives=Math.max(0,cpu.lives-loss);
-    }
-    cpu.kills+=Math.round(8+cpu.wave*1.3);
-    cpu.waveTimer=Math.max(1300,4200-cpu.wave*10)/cpu.params.speedMult;
-    if(cpu.lives<=0) cpu.alive=false;
-    battleLastProgressSnap[cpuUid]={wave:cpu.wave, lives:cpu.lives, kills:cpu.kills, alive:cpu.alive};
-    var row=document.getElementById(oppRowId(cpuUid));
-    if(row){
-      var wEl=row.querySelector('.oppWave'), lEl=row.querySelector('.oppLives');
-      if(wEl) wEl.textContent=fmt(cpu.wave);
-      if(lEl) lEl.textContent=fmt(Math.max(0,cpu.lives));
-    }
-    updateBattleRanking(battleLastProgressSnap);
-    if(!cpu.alive) checkCpuFinish();
+  cpu.wave=G.wave; // 플레이어와 항상 동일한 웨이브
+  cpu.gold+=Math.round(20*Math.pow(1.14,cpu.wave-1));
+  cpuAiSpend(cpu);
+  var req=40*Math.pow(1.085,cpu.wave);
+  if(cpu.power<req){
+    var shortfall=(req-cpu.power)/req;
+    var loss=Math.max(0, Math.round(shortfall*3-cpu.params.econEff));
+    if(loss>0) cpu.lives=Math.max(0,cpu.lives-loss);
   }
+  cpu.kills+=Math.round(8+cpu.wave*1.3);
+  if(cpu.lives<=0) cpu.alive=false;
+  battleLastProgressSnap[cpuUid]={wave:cpu.wave, lives:cpu.lives, kills:cpu.kills, alive:cpu.alive};
+  var row=document.getElementById(oppRowId(cpuUid));
+  if(row){
+    var wEl=row.querySelector('.oppWave'), lEl=row.querySelector('.oppLives');
+    if(wEl) wEl.textContent=fmt(cpu.wave);
+    if(lEl) lEl.textContent=fmt(Math.max(0,cpu.lives));
+  }
+  updateBattleRanking(battleLastProgressSnap);
+  if(!cpu.alive) checkCpuFinish();
 }
 function checkCpuFinish(){
   if(G.battleFinalized || !G.cpu) return;
@@ -2041,9 +2038,14 @@ function berserkerKillBonus(t){
   if(!t.berserker) return 0;
   return Math.min(3.0, (t.kills||0)*0.006); // 킬 1개당 +0.6%, 최대 +300% (500킬)
 }
-function towerDamage(t){ return t.dmg*G.buffDmg*(1+(t.fusionGrade||0)*0.12)*(1+effResearch().dmg*0.03)*(1+berserkerKillBonus(t)); }
-function towerRange(t){ return t.range*G.buffRange*(1+(t.fusionGrade||0)*0.04); }
-function towerRate(t){ return t.rate/G.buffAtkSpeed; }
+function towerDamage(t){ return t.dmg*G.buffDmg*(1+(t.fusionGrade||0)*0.20)*(1+effResearch().dmg*0.03)*(1+berserkerKillBonus(t)); }
+function towerRange(t){ return t.range*G.buffRange*(1+(t.fusionGrade||0)*0.06); }
+function fusionRateMult(t){
+  // F5부터 등급당 공격속도 4%씩 추가로 빨라짐 (최대 30%) - 합성을 아는 사람과 모르는 사람의 격차를 벌리는 포인트
+  var extraGrades=Math.max(0,(t.fusionGrade||0)-4);
+  return Math.max(0.7, 1-extraGrades*0.04);
+}
+function towerRate(t){ return (t.rate/G.buffAtkSpeed)*fusionRateMult(t); }
 function goldMult(){ return G.buffGold*(1+effResearch().goldGain*0.08); }
 
 function waveComposition(wave){
@@ -2087,6 +2089,7 @@ function beginWave(){
   var text = comp.isBoss? ('웨이브 '+G.wave+' - 보스 출현') : (comp.isMiniBoss? ('웨이브 '+G.wave+' - 미니보스 출현') : ('웨이브 '+G.wave));
   G.waveBanner={text:text, life:1700, maxLife:1700, boss:comp.isBoss||comp.isMiniBoss};
   sfxWaveStart(comp.isBoss);
+  if(G.cpuMode) cpuAdvanceWave();
   updateHUD();
   refreshTowerButtonLabels();
 }
@@ -2334,7 +2337,6 @@ function update(dt){
     if(G.battlePushAcc>3){ G.battlePushAcc=0; pushBattleProgress(); }
     G.battleRankAcc=(G.battleRankAcc||0)+dt;
     if(G.battleRankAcc>1){ G.battleRankAcc=0; updateBattleRanking(battleLastProgressSnap); }
-    if(G.cpuMode) simulateCpuTick(sdt);
   }
 
   if(G.shakeTime>0) G.shakeTime-=dt*1000;
@@ -3074,7 +3076,7 @@ function renderFusionOverlay(){
   }
   listEl.innerHTML=groups.map(function(g){
     var ready=g.towers.length>=3;
-    var afterStat = '공격력 +'+((g.grade+1)*15)+'% · 사거리 +'+((g.grade+1)*5)+'%';
+    var afterStat = '공격력 +'+((g.grade+1)*20)+'% · 사거리 +'+((g.grade+1)*6)+'%'+(g.grade+1>=5? ' · 공격속도 +'+Math.min(30,(g.grade+1-4)*4)+'%' : '');
     var remain=g.towers.length-3;
     var subText = ready
       ? ('합성 시 3개 사용 → F'+(g.grade+1)+' 1개 생성'+(remain>0? (' (F'+g.grade+' '+remain+'개 남음)') : '')+' · '+afterStat)
@@ -3128,8 +3130,8 @@ function abilityLines(kind, def){
   if(def.obelisk) lines.push('액티브 스킬: 화면의 모든 적을 '+(def.obeliskStunMs/1000)+'초 기절 (쿨다운 '+(def.obeliskCooldownMs/1000)+'초)');
   return lines;
 }
-function towerDamageWith(dmgBase, t){ return dmgBase*G.buffDmg*(1+(t.fusionGrade||0)*0.12)*(1+effResearch().dmg*0.03)*(1+berserkerKillBonus(t)); }
-function towerRangeWith(rangeBase, t){ return rangeBase*G.buffRange*(1+(t.fusionGrade||0)*0.04); }
+function towerDamageWith(dmgBase, t){ return dmgBase*G.buffDmg*(1+(t.fusionGrade||0)*0.20)*(1+effResearch().dmg*0.03)*(1+berserkerKillBonus(t)); }
+function towerRangeWith(rangeBase, t){ return rangeBase*G.buffRange*(1+(t.fusionGrade||0)*0.06); }
 // 레벨이 오를수록 업그레이드 1회당 공격력 증가율이 점점 완만해짐 (체감 수확)
 // Lv1→2: +27%, Lv5→6: +약17%, Lv9→10: +약12%, Lv19→20: +약8%
 function upgradeDmgMult(level){
