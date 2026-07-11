@@ -100,7 +100,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       <div id="tdLevelInfo" style="font-size:9.5px; opacity:0.85; margin-top:2px;">Lv1 · 0/100 XP</div>
       <div id="tdSkipRow" style="display:none; align-items:center; justify-content:center; gap:6px; margin-top:4px; font-size:10px; width:100%; max-width:220px;">
         <span style="opacity:0.85;">시작 웨이브</span>
-        <select id="tdSkipSelect" style="padding:5px 7px; border-radius:6px; background:rgba(255,255,255,0.1); color:#fff; border:0.5px solid rgba(255,255,255,0.3); font-size:10.5px;"></select>
+        <select id="tdSkipSelect" style="padding:5px 7px; border-radius:6px; background:rgba(255,255,255,0.1); color:#fff; border:0.5px solid rgba(255,255,255,0.3); font-size:10.5px; color-scheme:dark;"></select>
       </div>
       <div id="tdAuthMenu" style="display:flex; flex-direction:column; gap:5px; width:100%; max-width:220px; margin-top:6px;">
         <button id="tdLoginBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">로그인</button>
@@ -1063,8 +1063,28 @@ function saveLocalXP(){
 function levelFromXP(xp){ return Math.floor(xp/100)+1; }
 function xpIntoLevel(xp){ return xp%100; }
 function maxSkipWaveForLevel(level){ return Math.min(30, (level-1)*5); }
-// 웨이브별 기본 클리어 보상 (실제 인게임 웨이브 보상 계산식과 동일, 2520번째 줄 참고)
+// 웨이브별 기본 클리어 보상 (실제 인게임 웨이브 보상 계산식과 동일, beginWave 부근의 bonus 계산 참고)
 function waveClearBaseReward(wave){ return 20*Math.pow(1.14, wave-1); }
+// 몬스터 종류별 골드 배율의 가중평균 (실제 처치 보상 계산식 reward2=baseReward*(0.6+hp*0.6)과 동일 공식, 해당 웨이브에 등장 가능한 종류만 반영)
+function avgKillRewardMultForWave(wave){
+  var totalW=0, totalM=0;
+  for(var key in ENEMY_TYPES){
+    var d=ENEMY_TYPES[key];
+    if(wave<d.unlock) continue;
+    var mult=0.6+d.hp*0.6;
+    totalW+=d.weight; totalM+=d.weight*mult;
+  }
+  return totalW>0? (totalM/totalW) : 1;
+}
+// 해당 웨이브의 몬스터를 전부 처치했을 때 얻는 골드 추정치 (일반 몹 처치 보상 + 보스/미니보스 보너스, waveComposition/spawnOneEnemy의 실제 스폰 로직 기준)
+function waveKillGoldEstimate(wave){
+  var comp=waveComposition(wave);
+  var baseReward=5*Math.pow(1.15, wave-1);
+  var bonus = comp.isBoss? baseReward*25 : (comp.isMiniBoss? baseReward*8 : 0);
+  var normalCount = comp.count - ((comp.isBoss||comp.isMiniBoss)? 1 : 0);
+  var normalGold = normalCount*baseReward*avgKillRewardMultForWave(wave);
+  return normalGold+bonus;
+}
 // 스킵한 웨이브 구간이 높을수록 보상 비율을 올려 스킵의 전략적 가치를 높임
 function skipBonusRatioForWave(wave){
   if(wave<=30) return 0.4;
@@ -1075,7 +1095,7 @@ function estimateSkipGold(skipWave){
   if(skipWave<=1) return 0;
   var total=0;
   for(var w=1; w<skipWave; w++){
-    total += waveClearBaseReward(w)*skipBonusRatioForWave(w);
+    total += (waveClearBaseReward(w)+waveKillGoldEstimate(w))*skipBonusRatioForWave(w);
   }
   return Math.round(total);
 }
@@ -4719,7 +4739,7 @@ function refreshLevelUI(){
     var opts=[1];
     for(var w=5; w<=maxSkip; w+=5) opts.push(w);
     var prevVal=sel.value;
-    sel.innerHTML=opts.map(function(w){ return '<option value="'+w+'">'+(w===1? '1 (처음부터)' : w+'웨이브 (+'+fmt(estimateSkipGold(w))+'골드)')+'</option>'; }).join('');
+    sel.innerHTML=opts.map(function(w){ return '<option value="'+w+'" style="background:#1b2230; color:#fff;">'+(w===1? '1 (처음부터)' : w+'웨이브 (+'+fmt(estimateSkipGold(w))+'골드)')+'</option>'; }).join('');
     if(opts.indexOf(parseInt(prevVal,10))>=0) sel.value=prevVal;
     selectedSkipWave=parseInt(sel.value,10)||1;
   } else {
