@@ -208,6 +208,22 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       <div style="font-size:14px; font-weight:700;">📝 패치노트</div>
       <div style="display:flex; flex-direction:column; gap:10px; width:100%; max-width:360px; margin-top:2px; text-align:left; font-size:10.5px; line-height:1.55;">
         <div>
+          <div style="font-weight:700; color:#F0B90B; margin-bottom:3px;">📅 2026-07-11 업데이트</div>
+          <div>· CPU/온라인 대전 상대 AI 전면 개편 - 브론즈~챌린저 8개 티어가 서로 다른 성향(경제형/공격형/합성중시 등)과 실수·망설임·합성 지연을 갖도록 재설계, 웨이브가 진행될수록 피로가 쌓여 자연스럽게 무너짐</div>
+          <div>· 오토플레이 AI도 같은 방식으로 개선 (실수/대기/저축/합성 판단 추가, 실버~낮은 플래티넘 수준으로 실력 고정)</div>
+          <div>· 신규 계정 및 기존 계정 모두 CPU 랭크 실버 티어에서 시작하도록 수정</div>
+          <div>· 게임 오버 시 어떤 몬스터를 놓쳐서 끝났는지 분석하는 코멘트 추가</div>
+          <div>· 타워 16종 전체를 커스텀 SVG 아트로 교체, 공격 대상이 있을 때만 조준 회전하도록 수정</div>
+          <div>· 타워 생산 버튼 꾹 누르면 2x2(4개)/3x3(9개) 일괄 건설 메뉴 (자금 부족 시 자동 비활성화)</div>
+          <div>· 배경음악 6곡 전면 교체 (더 빠른 템포, 드럼/딜레이 추가)</div>
+          <div>· 실시간 DPS(딜) 미터기 추가 (타워 종류별 집계, 드래그/접기 가능)</div>
+          <div>· 상대 정보 패널 접기 기능, 하단 버튼 배치 재정리</div>
+          <div>· 웨이브 스킵 골드 보상 상향, CPU/온라인 대전에서는 웨이브 스킵·자동선택 비활성화 (오프라인은 그대로 유지)</div>
+          <div>· 일괄 업그레이드 시 효과음이 겹쳐 커지던 문제 수정, 웨이브 스킵 드롭다운 글자 안 보이던 문제 수정</div>
+          <div>· 재접속 시 맵이 랜덤으로 바뀌어 타워가 경로 밖에 놓이던 문제 수정</div>
+          <div>· 관통저격수 철갑 몬스터 추가 데미지, 미사일터렛 레벨업 성장폭 조정, 블랙홀 타워 최대 2개 제한</div>
+        </div>
+        <div>
           <div style="font-weight:700; color:#8FD16A; margin-bottom:3px;">🆕 신규 기능</div>
           <div>· 온라인 대전(연결 끊김 10초 재접속, 최대 4인 서바이벌), CPU 랭크 대전(레이팅제)</div>
           <div>· 타이틀로 나가기, 확대(1.0/1.5/2.0x), 일괄 업그레이드, 오토플레이 모드</div>
@@ -1393,6 +1409,28 @@ function clearInProgressGame(){
   if(!currentUser || !fbReady()) return;
   firebase.database().ref('users/'+currentUser.uid+'/inProgress').remove().catch(function(e){});
 }
+// [게임오버 분석] legendData(도감 표시명)를 재사용해 몬스터 타입 키 -> 한글 이름 변환
+function enemyDisplayName(type){
+  for(var i=0;i<legendData.length;i++){ if(legendData[i][0]===type) return legendData[i][1]; }
+  return type;
+}
+// [게임오버 분석] 마지막으로 통과한 웨이브에서 어떤 몬스터가 새어나갔는지 집계해 코멘트 문자열(HTML)을 생성.
+// 놓친 기록(G.leakLog)이 없으면(예: 온라인전 몰수패 등 생명 손실 없이 끝난 경우) 빈 문자열을 반환.
+function buildLeakAnalysisHtml(){
+  var log=G.leakLog||[];
+  if(log.length===0) return '';
+  var lastWave=log[log.length-1].wave;
+  var finalBatch=log.filter(function(l){ return l.wave===lastWave; });
+  var counts={};
+  finalBatch.forEach(function(l){ counts[l.type]=(counts[l.type]||0)+1; });
+  var types=Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
+  if(types.length===0) return '';
+  var parts=types.map(function(t){ return enemyDisplayName(t)+(counts[t]>1? ' x'+counts[t] : ''); });
+  var mainType=types[0];
+  var tip=(typeof MONSTER_DESC!=='undefined' && MONSTER_DESC[mainType] && MONSTER_DESC[mainType].desc) ? MONSTER_DESC[mainType].desc : '';
+  return '<br><span style="opacity:0.8; font-size:10.5px;">🔍 웨이브 '+lastWave+'에서 놓친 몬스터: '+parts.join(', ')+'</span>'
+    + (tip? ('<br><span style="opacity:0.6; font-size:9.5px;">💡 '+enemyDisplayName(mainType)+' - '+tip+'</span>') : '');
+}
 function triggerGameOver(forced){
   G.gameOver=true;
   clearInProgressGame();
@@ -1415,9 +1453,10 @@ function triggerGameOver(forced){
     levelUpHtml = newLevel>prevLevel ? ('<br><span style="color:#F0B90B;">레벨 업! Lv'+newLevel+' 달성 (최대 '+maxSkipWaveForLevel(newLevel)+'웨이브까지 스킵 가능)</span>') : '';
   }
   overlayTitle.textContent = G.testMode? '테스트 종료' : '게임 오버';
+  var leakAnalysisHtml=buildLeakAnalysisHtml();
   overlaySub.innerHTML = G.testMode
-    ? ('도달한 웨이브: '+G.wave+'<br><span style="opacity:0.7;">테스트 모드 - 기록은 저장되지 않습니다</span>')
-    : ('도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml);
+    ? ('도달한 웨이브: '+G.wave+'<br><span style="opacity:0.7;">테스트 모드 - 기록은 저장되지 않습니다</span>'+leakAnalysisHtml)
+    : ('도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml+leakAnalysisHtml);
   G.finalWave=G.wave; G.finalKills=G.totalKills;
   if(G.battleMode && battleRoomCode){
     pushBattleProgress();
@@ -2238,12 +2277,19 @@ async function loadOrInitSave(user, nickHint){
       sessionBest = typeof data.sessionBest==='number'? data.sessionBest : 0;
       userXP = typeof data.userXP==='number'? data.userXP : 0;
       cpuRating = typeof data.cpuRating==='number'? data.cpuRating : CPU_RATING_DEFAULT;
+      // [레이팅 실버 일괄 초기화] 기존 유저는 저장된 레이팅을 그대로 불러오고 있어 "실버로 시작" 개편이
+      // 반영되지 않았음 - 계정당 1회만 강제로 실버 기본값(300)으로 리셋하고, 이후에는 평소대로 배틀 결과에
+      // 따라 오르내리게 둔다 (매번 리셋되는 게 아니라 ratingResetSilverV1 플래그로 1회만 적용됨).
+      if(!data.ratingResetSilverV1){
+        cpuRating=CPU_RATING_DEFAULT;
+        await firebase.database().ref('users/'+user.uid+'/save').update({cpuRating:cpuRating, ratingResetSilverV1:true});
+      }
       saveLocalXP();
       refreshLevelUI();
     } else {
       researchPoints=0; sessionBest=0; userXP=0; cpuRating=CPU_RATING_DEFAULT;
       Object.keys(research).forEach(function(k){ research[k]=0; });
-      await firebase.database().ref('users/'+user.uid+'/save').set({research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, cpuRating:cpuRating, updatedAt:Date.now()});
+      await firebase.database().ref('users/'+user.uid+'/save').set({research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, cpuRating:cpuRating, ratingResetSilverV1:true, updatedAt:Date.now()});
       saveLocalXP();
       refreshLevelUI();
     }
@@ -2707,6 +2753,7 @@ function resetGame(forBattle){
   G.state='intermission'; G.intermissionTimer=5000;
   G.spawnGap=600; G.remainingToSpawn=0; G.spawnTimer=0; G.bossQueued=false; G.miniBossQueued=false;
   G.crateWave=0; G.crateSpawned=false; G.lastPlacement=null;
+  G.leakLog=[]; // [게임오버 분석] 이번 판에 기지를 통과한 몬스터 기록 (게임오버 코멘트용)
   G.enemies=[]; G.towers={}; G.projectiles=[]; G.particles=[]; G.rings=[]; G.floaters=[]; G.lasers=[]; G.floatersSuppressed=false; G.perfSimpleMode=false;
   G.selectedTower=null; G.placeType=null; G.bulkBuildSize=null; G.hoverCell=null;
   G.fusionMode=false; G.fusionSelection=[];
@@ -3143,6 +3190,9 @@ function update(dt){
         continue;
       }
       e.alive=false; G.lives--; G.shakeTime=250; G.shakeMag=4; sfxLeak();
+      // [게임오버 분석] 어떤 몬스터가 통과했는지 기록 (최근 40건만 유지, 게임오버 시 마지막 웨이브분을 분석해 코멘트 생성)
+      G.leakLog.push({type:e.type, elite:e.elite||null, wave:G.wave});
+      if(G.leakLog.length>40) G.leakLog.shift();
       if(e.type==='titan'){ G.lives--; G.shakeTime=350; G.shakeMag=6; }
       if(e.type==='thief'){
         var stolen=Math.min(G.money, Math.round(40*Math.pow(1.1,G.wave-1)));
