@@ -24,7 +24,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
 #tdAutoChoiceWrap{ position:relative; border-radius:13px; }
 #tdAutoBorderSvg{ position:absolute; inset:-4px; width:calc(100% + 8px); height:calc(100% + 8px); pointer-events:none; opacity:0; transition:opacity 0.2s ease; }
 #tdAutoChoiceWrap.tdSpinBorder #tdAutoBorderSvg{ opacity:1; }
-.tdTowerChip{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:64px; flex:0 0 auto; padding:7px 6px 6px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface-2); transition:transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.tdTowerChip{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:64px; flex:0 0 auto; padding:7px 6px 6px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface-2); transition:transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease; touch-action:manipulation; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 .tdTowerChip:hover{ transform:translateY(-2px); box-shadow:0 4px 10px rgba(0,0,0,0.2); }
 .tdTowerChip:active{ transform:translateY(0) scale(0.96); }
 .tdTowerChip.tdSelected{ border-color:var(--border-accent); box-shadow:0 0 0 2px var(--border-accent) inset; }
@@ -1941,15 +1941,63 @@ function rankLabelHtml(rating){
   var info=getRankInfo(rating);
   return '<span style="color:'+info.tier.color+';">'+info.tier.icon+' '+info.tier.name+'</span> <span style="opacity:0.7;">('+info.lp+' LP)</span>';
 }
-// 레이팅이 높을수록 CPU의 경제 효율/속도가 매끄럽게 강해지고, 실수 빈도는 줄어듦 (다이아부터 합성 사용)
-function cpuParamsForRating(rating){
-  var t=Math.max(0, Math.min(1, rating/1400));
+// ===================================================================
+// [CPU AI 개편] 티어별 "성격"이 다른 사람 같은 CPU를 만들기 위한 프로필 테이블.
+// 기존에는 rating 하나로 econEff/mistakeChance를 매끄럽게 보간(interpolate)했지만,
+// 그러면 티어마다 "숫자만 다른" 존재가 되어 요청사항(성격이 달라야 함)을 만족하지 못함.
+// 그래서 티어별 기준치(econBase/mistakeBase 등)를 직접 부여하고, 그 위에 "피로도(fatigue)"가
+// 얹혀서 웨이브가 진행될수록 점점 무너지도록 설계함. RANK_TIERS(랭크 시스템)는 건드리지 않음.
+// ===================================================================
+var CPU_TIER_PROFILE={
+  // econBase: 골드→파워 전환 효율 기준치 (낮을수록 경제 운영이 서툼)
+  // mistakeBase: 턴을 그냥 흘려보내는(아무것도 안 하는) 기본 확률
+  // fatigueStart: 이 웨이브부터 피로도가 쌓이기 시작 (그 전까지는 0%)
+  // fatigueRate: 웨이브당 피로도 증가율
+  // fusionDelayWaves: 합성 조건이 충족된 뒤 실제로 합성을 "결단"하기까지 걸리는 웨이브 수 (사람처럼 즉시 합성하지 않음)
+  // reactionMs: 참고용 반응속도(ms) - 로그/표시용, 낮을수록 사람이 더 빠르게 반응
+  // suboptimalChance: 업그레이드/투자 시 "최선이 아닌" 선택을 할 확률
+  // bossPenalty: 보스 웨이브에서 추가로 흔들리는 정도
+  // fatigueStart/fatigueRate는 목표 생존 웨이브(브론즈~15, 실버~20-25, 골드~30-35, 플래티넘~40-45,
+  // 다이아~50-60, 마스터~70-80, 챌린저~100)에 맞춰 시뮬레이션으로 보정된 값 (cpuAdvanceWave의 상대 화력 침식과 결합)
+  bronze:      {name:'브론즈',      econBase:0.30, mistakeBase:0.55, fatigueStart:6,  fatigueRate:0.080, fusionDelayWaves:[3,6],   reactionMs:[900,1200], suboptimalChance:0.55, bossPenalty:0.35},
+  silver:      {name:'실버',        econBase:0.42, mistakeBase:0.42, fatigueStart:11, fatigueRate:0.095, fusionDelayWaves:[2,5],   reactionMs:[750,1050], suboptimalChance:0.42, bossPenalty:0.28},
+  gold:        {name:'골드',        econBase:0.55, mistakeBase:0.30, fatigueStart:18, fatigueRate:0.077, fusionDelayWaves:[2,4],   reactionMs:[600,900],  suboptimalChance:0.30, bossPenalty:0.22},
+  platinum:    {name:'플래티넘',    econBase:0.68, mistakeBase:0.18, fatigueStart:27, fatigueRate:0.083, fusionDelayWaves:[1,3],   reactionMs:[500,750],  suboptimalChance:0.20, bossPenalty:0.16},
+  diamond:     {name:'다이아',      econBase:0.80, mistakeBase:0.10, fatigueStart:36, fatigueRate:0.077, fusionDelayWaves:[1,2],   reactionMs:[400,650],  suboptimalChance:0.12, bossPenalty:0.10},
+  master:      {name:'마스터',      econBase:0.90, mistakeBase:0.05, fatigueStart:52, fatigueRate:0.067, fusionDelayWaves:[1,2],   reactionMs:[350,550],  suboptimalChance:0.06, bossPenalty:0.06},
+  grandmaster: {name:'그랜드마스터', econBase:0.95, mistakeBase:0.035,fatigueStart:58, fatigueRate:0.050, fusionDelayWaves:[0.5,1.5],reactionMs:[320,500], suboptimalChance:0.04, bossPenalty:0.05},
+  challenger:  {name:'챌린저',      econBase:0.98, mistakeBase:0.02, fatigueStart:65, fatigueRate:0.040, fusionDelayWaves:[0.5,2],  reactionMs:[300,450], suboptimalChance:0.03, bossPenalty:0.04}
+};
+// 매 판마다 무작위로 하나 배정되는 "플레이 성향" - 같은 티어라도 판마다 다른 느낌을 주기 위함
+var CPU_PERSONALITIES=['economic','aggressive','balanced','defensive','fusionFocused','upgradeFocused'];
+function cpuTierProfile(tierKey){
+  return CPU_TIER_PROFILE[tierKey] || CPU_TIER_PROFILE.silver;
+}
+// 웨이브가 진행될수록 쌓이는 피로도(0~1). 티어마다 시작 웨이브와 속도가 달라 "다른 방식으로 지침"을 표현.
+function cpuFatigueForWave(profile, wave){
+  if(wave<=profile.fatigueStart) return 0;
+  return Math.max(0, Math.min(1, (wave-profile.fatigueStart)*profile.fatigueRate));
+}
+// 티어 키만으로 그 시점(wave)의 파라미터를 계산 - 전투 중 매 웨이브 "피로도 갱신"에 사용 (원래 레이팅을 다시 몰라도 됨)
+function cpuParamsForTier(tierKey, wave){
+  var profile=cpuTierProfile(tierKey);
+  var fatigue=cpuFatigueForWave(profile, wave||1);
   return {
-    econEff: 0.42+0.68*t,
-    mistakeChance: Math.max(0, 0.42*(1-t)),
-    speedMult: 0.52+0.86*t,
-    fusion: rating>=800
+    tierKey: tierKey,
+    profile: profile,
+    fatigue: fatigue,
+    // 하위 호환 필드 (기존 코드가 읽던 이름 그대로 유지: econEff/mistakeChance/speedMult/fusion)
+    econEff: Math.max(0.05, profile.econBase*(1-fatigue*0.6)),
+    mistakeChance: Math.max(0, Math.min(0.97, profile.mistakeBase+fatigue*0.5)),
+    speedMult: 0.52+0.86*Math.max(0, Math.min(1, cpuRating/1400)),
+    fusion: true // 모든 티어가 합성을 "시도"는 함 (다만 브론즈/실버는 합성 지연이 길어 거의 못 씀)
   };
+}
+// 레이팅 → 티어를 찾고(getRankInfo는 기존 랭크 시스템 그대로 재사용), 그 티어의 "성격"을 반영한 파라미터를 만듦.
+// 전투 시작 시 한 번 호출되며, 이후 매 웨이브 갱신은 cpuParamsForTier()가 담당.
+function cpuParamsForRating(rating, wave){
+  var info=getRankInfo(rating); // 기존 랭크 판정 로직 재사용 (랭크 시스템 자체는 변경하지 않음)
+  return cpuParamsForTier(info.tier.key, wave);
 }
 function renderCpuRankBadge(){
   var el=document.getElementById('tdCpuRankBadge');
@@ -1957,48 +2005,182 @@ function renderCpuRankBadge(){
   el.innerHTML='<div style="font-size:15px; font-weight:800;">'+rankLabelHtml(cpuRating)+'</div>'
     +'<div style="font-size:9.5px; opacity:0.7; margin-top:3px;">현재 레이팅과 비슷한 실력의 CPU와 매칭됩니다 (승 +35 / 패 -25)</div>';
 }
+// [CPU AI 개편] 판마다 무작위 성향을 하나 배정 - 같은 티어라도 매번 다른 플레이 느낌을 주기 위함
+function cpuAssignPersonality(){
+  return CPU_PERSONALITIES[Math.floor(Math.random()*CPU_PERSONALITIES.length)];
+}
 function beginCpuBattle(){
   document.getElementById('tdCpuPanel').style.display='none';
   refreshLevelUI();
   resetGame(true);
   G.cpuMode=true;
   G.cpuMatchStartRating=cpuRating;
-  var params=cpuParamsForRating(cpuRating);
+  var params=cpuParamsForRating(cpuRating, 1);
   G.speedMult=2; G.paused=false; G.manualPause=false;
   setBattleControlsUI(true);
   battleRoomCode=null; battleIsHost=true;
   var rinfo=getRankInfo(cpuRating);
   battlePlayers={}; battlePlayers[cpuUid]={nick:'CPU · '+rinfo.tier.icon+' '+rinfo.tier.name};
-  G.cpu={wave:0, lives:20, kills:0, gold:150, power:0, towers:0, alive:true, params:params};
+  // [CPU AI 개편] 기존 필드(wave/lives/kills/gold/power/towers/alive/params)는 그대로 두고,
+  // 레이어드 AI에 필요한 상태만 추가함: personality(성향), fatigue(피로도, 매 웨이브 갱신),
+  // fusionGroupSince(합성 재료가 갖춰진 시점의 웨이브, 지연 판단용), pendingFusionDelay(이번 합성 기회의 목표 지연 웨이브 수),
+  // mood(직전 선택한 행동 - 로그/디버그 표시용)
+  G.cpu={
+    wave:0, lives:20, kills:0, gold:150, power:0, towers:0, alive:true, params:params,
+    personality: cpuAssignPersonality(),
+    fatigue: 0,
+    fusionGroupSince: null,
+    pendingFusionDelay: null,
+    mood: 'idle'
+  };
   battleLastProgressSnap={}; battleLastProgressSnap[cpuUid]={wave:0, lives:20, alive:true};
   document.getElementById('tdBattleHud').style.display='block';
   renderOppHud();
   applyBattleHudCollapsed();
   enterGameplay();
 }
-function cpuAiSpend(cpu){
-  var p=cpu.params;
-  if(Math.random()<p.mistakeChance) return; // 레이팅이 낮을수록 자주 '실수'로 턴을 흘려보냄
-  var spend=Math.round(cpu.gold*(0.5+p.econEff*0.4));
-  if(spend<40) return;
-  cpu.gold-=spend;
-  cpu.power+=spend*(0.6+p.econEff*0.5);
-  cpu.towers++;
-  var action = cpu.towers%5===0 && p.fusion ? '타워 합성' : (cpu.towers%3===0? '신규 타워 설치' : '타워 업그레이드');
-  var row=document.getElementById(oppRowId(cpuUid));
-  if(row){
-    var logEl=row.querySelector('.oppLog');
-    if(logEl){ logEl.style.display='block'; logEl.textContent='CPU: '+action+' (+'+fmt(spend)+'골드)'; }
+// [CPU AI 개편] 성향(personality)별로 6가지 행동에 다르게 가중치를 두는 표.
+// build/upgrade/fusion/save/wait 다섯 값의 "상대적 선호도"이며, 실제 확률은 상황(threat/econ 등)과 곱해져 매번 달라짐.
+// 'none'(아무 것도 안 함)은 mistakeChance 굴림에서 별도로 처리되므로 여기엔 없음.
+var CPU_PERSONALITY_WEIGHTS={
+  economic:       {build:0.9, upgrade:1.3, fusion:1.0, save:1.6, wait:1.0},
+  aggressive:     {build:1.7, upgrade:0.9, fusion:1.0, save:0.4, wait:0.6},
+  balanced:       {build:1.0, upgrade:1.0, fusion:1.0, save:1.0, wait:1.0},
+  defensive:      {build:0.6, upgrade:1.4, fusion:0.9, save:1.4, wait:1.1},
+  fusionFocused:  {build:0.8, upgrade:0.9, fusion:1.8, save:1.3, wait:0.8},
+  upgradeFocused: {build:0.6, upgrade:1.8, fusion:1.0, save:0.9, wait:0.8}
+};
+// [CPU AI 개편] 합성 재료(타워 3개 단위)가 갖춰져도 사람처럼 곧바로 합성하지 않고,
+// 티어별 지연(fusionDelayWaves, 웨이브 단위로 환산)이 지나야 실제로 합성을 "결단"한다.
+// 보스 웨이브에는 타이밍을 놓치기도 한다(Boss Waves 요구사항: late fusion / miss timing).
+function cpuFusionDecision(cpu, ctx){
+  var profile=cpu.params.profile;
+  if(cpu.fusionGroupSince===null){
+    cpu.fusionGroupSince=cpu.wave; // 재료가 이번에 처음 갖춰짐 - 지연 타이머 시작
+    var range=profile.fusionDelayWaves;
+    cpu.pendingFusionDelay=(range[0]+Math.random()*(range[1]-range[0]))*(1+cpu.fatigue); // 피로할수록 더 늑장 부림
+    return false;
   }
+  if(ctx.isBossWave && Math.random()<profile.bossPenalty) return false; // 보스 웨이브엔 타이밍을 놓치기도 함
+  var waited=cpu.wave-cpu.fusionGroupSince;
+  if(waited>=cpu.pendingFusionDelay){
+    cpu.fusionGroupSince=null; cpu.pendingFusionDelay=null; // 이번 합성 완료 - 다음 재료를 위해 초기화
+    return true;
+  }
+  return false;
+}
+// [CPU AI 개편] Choose Action 단계 - 성향 가중치 x 상황 분석(threat/econ/powerRatio)을 곱해
+// build/upgrade/fusion/save/wait 중 하나를 확률적으로 선택한다. 항상 "최적"이 아니라 "그럴듯한" 선택.
+function cpuChooseAction(cpu, ctx){
+  var profile=cpu.params.profile;
+  var w=CPU_PERSONALITY_WEIGHTS[cpu.personality]||CPU_PERSONALITY_WEIGHTS.balanced;
+  var fusionReady = (cpu.towers>0 && cpu.towers%3===0) && cpuFusionDecision(cpu, ctx);
+  var weights={
+    build: w.build * (ctx.threatLevel>0.4? 1.3:1),           // 위협적일수록 새 타워를 짓고 싶어함
+    upgrade: w.upgrade * (ctx.powerRatio<1? 1.2:0.9),         // 화력이 부족하면 업그레이드를 더 고려
+    fusion: fusionReady? w.fusion*2.2 : 0,                    // 준비 안 됐으면 아예 선택지에서 제외
+    // 하위 티어일수록(mistakeBase가 높을수록) "이유 없이 돈을 아끼는" 비합리적 저축 성향이 강해짐
+    save: w.save * (ctx.econHealth<0.5? 1.3:0.8) * (1+profile.mistakeBase*0.5),
+    wait: w.wait * (1+cpu.fatigue) // 피로할수록 우물쭈물 대기하는 비중이 늘어남
+  };
+  var total=0, keys=Object.keys(weights);
+  keys.forEach(function(k){ total+=weights[k]; });
+  var r=Math.random()*total;
+  for(var i=0;i<keys.length;i++){
+    r-=weights[keys[i]];
+    if(r<=0) return keys[i];
+  }
+  return 'wait';
+}
+// [CPU AI 개편] 상대 정보창 로그에 사람이 읽을 수 있는 한 줄을 남김 (기존에도 있던 표시 방식 재사용)
+function cpuLogAction(cpu, text, spend){
+  var row=document.getElementById(oppRowId(cpuUid));
+  if(!row) return;
+  var logEl=row.querySelector('.oppLog');
+  if(!logEl) return;
+  logEl.style.display='block';
+  logEl.textContent='CPU: '+text+(spend>0? (' (+'+fmt(spend)+'골드)') : '');
+}
+// [CPU AI 개편] Execute 단계 - 선택된 행동을 실제 골드/파워 변화로 반영.
+// suboptimal(최선이 아닌 선택)일 확률은 티어의 suboptimalChance를 따르며, 걸리면 효율이 크게 깎인다
+// (Upgrade AI 요구사항: "가끔 의도적으로 더 약한 업그레이드를 고름").
+function cpuExecuteAction(cpu, action, ctx){
+  var p=cpu.params, profile=p.profile;
+  var suboptimal = Math.random()<profile.suboptimalChance;
+  if(action==='save'){ cpu.mood='save'; cpuLogAction(cpu, '골드를 아끼는 중', 0); return; }
+  if(action==='wait'){ cpu.mood='wait'; cpuLogAction(cpu, '다음 수를 고민 중', 0); return; }
+  if(action==='fusion'){
+    // 합성: 세 타워 분의 재료를 하나로 모아 더 큰 배율로 강화 (실제 게임의 합성 보너스 컨셉을 축약해 반영)
+    var fusionSpend=Math.round(cpu.gold*(0.35+p.econEff*0.3));
+    if(fusionSpend<30) fusionSpend=Math.min(cpu.gold, 30);
+    cpu.gold-=fusionSpend;
+    var fusionMult=suboptimal? 1.0 : 1.35; // 실수하면 합성 이득이 줄어듦(비효율적 합성)
+    cpu.power+=fusionSpend*(0.7+p.econEff*0.6)*fusionMult;
+    cpu.mood='fusion';
+    cpuLogAction(cpu, '타워 합성', fusionSpend);
+    return;
+  }
+  // build / upgrade 공통 처리 - 업그레이드가 건설보다 씀씀이는 적지만 골드당 효율은 더 좋음(실제 게임과 동일한 성질)
+  var baseFrac = action==='build'? (0.45+p.econEff*0.35) : (0.30+p.econEff*0.25);
+  var spend=Math.round(cpu.gold*baseFrac);
+  if(spend<30){ cpu.mood='wait'; return; } // 쓸 돈이 너무 적으면 그냥 다음 기회를 봄 (자연스러운 대기)
+  cpu.gold-=spend;
+  var eff = action==='build'? (0.55+p.econEff*0.45) : (0.75+p.econEff*0.55);
+  if(suboptimal) eff*=0.55; // 최선이 아닌 선택 - 효율이 크게 깎임 ("불필요한 타워"/"비효율적 지출"/"최선이 아닌 업그레이드")
+  cpu.power+=spend*eff;
+  if(action==='build') cpu.towers++;
+  cpu.mood=action;
+  cpuLogAction(cpu, action==='build'? (suboptimal? '불필요한 타워 설치':'신규 타워 설치') : (suboptimal? '아쉬운 업그레이드':'타워 업그레이드'), spend);
+}
+// [CPU AI 개편] 기존의 "실수 아니면 무조건 스펜드" 단순 로직을
+// Think -> Analyze(Wave/Economy/Towers/Enemies) -> Choose Action -> Execute 5단계 레이어드 AI로 교체.
+// 항상 최적으로 플레이하지 않고, 티어별 성격과 그날의 성향(personality)에 따라 사람처럼 판단한다.
+function cpuAiSpend(cpu){
+  var p=cpu.params, profile=p.profile;
+  var wave=cpu.wave;
+  var isBossWave = (wave%10===0); // 실제 게임의 보스 웨이브 주기(waveComposition)와 동일한 규칙을 재사용
+
+  // ---- THINK / ANALYZE: 웨이브, 경제, 타워, "적(위협도)"을 먼저 살펴봄 ----
+  var req=40*Math.pow(1.085, wave); // 이 웨이브를 버티는 데 필요한 파워 (기존 공식 그대로, 절대 변경 금지 영역)
+  var powerRatio = req>0? cpu.power/req : 1; // 웨이브 분석: 지금 화력이 충분한지
+  var econHealth = Math.min(1, cpu.gold/(req*2)); // 경제 분석: 골드가 넉넉한 편인지
+  var threatLevel = (isBossWave? 0.3:0) + Math.max(0, 1-powerRatio); // 적 분석: 보스이거나 화력이 밀리면 위협적
+
+  // 보스 웨이브에서는 판단력이 흔들리는 정도(bossPenalty)만큼 이번 웨이브의 실수 확률이 추가로 올라감
+  var mistakeChance = Math.max(0, Math.min(0.97, p.mistakeChance + (isBossWave? profile.bossPenalty*0.5 : 0)));
+
+  // "아무 것도 안 함" - 순수하게 턴을 흘려보내는 실수 (Ignore optimal timing)
+  if(Math.random()<mistakeChance){
+    cpu.mood='mistake';
+    cpuLogAction(cpu, '판단을 내리지 못하고 턴을 흘려보냄', 0);
+    return;
+  }
+
+  // ---- CHOOSE ACTION: 성향 + 분석 결과로 행동 하나를 확률적으로 선택 ----
+  var action=cpuChooseAction(cpu, {powerRatio:powerRatio, econHealth:econHealth, isBossWave:isBossWave, threatLevel:threatLevel});
+
+  // ---- EXECUTE: 선택한 행동을 실행 ----
+  cpuExecuteAction(cpu, action, {isBossWave:isBossWave});
 }
 // CPU는 더 이상 자체 타이머로 웨이브를 진행하지 않고, 플레이어의 실제 웨이브 진행에 맞춰 동기화됨
 function cpuAdvanceWave(){
   var cpu=G.cpu;
   if(!cpu || !cpu.alive) return;
   cpu.wave=G.wave; // 플레이어와 항상 동일한 웨이브
+  // [CPU AI 개편] 매 웨이브 피로도(fatigue)를 갱신 - 웨이브가 진행될수록 economy 효율이 낮아지고 실수 확률이 올라감.
+  // 티어(rating)는 전투 중 바뀌지 않으므로 tierKey만 유지한 채 파라미터를 다시 계산.
+  cpu.params=cpuParamsForTier(cpu.params.tierKey, cpu.wave);
+  cpu.fatigue=cpu.params.fatigue;
+  // [CPU AI 개편] 상대적 화력 침식 - 몬스터 요구 화력(req)은 매 웨이브 1.085배씩 커지는데,
+  // CPU가 그만큼 재투자하지 않으면 상대적으로 뒤쳐지도록 기존 파워를 자연 감소시킴.
+  // 피로도가 쌓일수록 침식 속도 자체가 더 빨라져(지수 가중), 각 티어가 지정된 목표 웨이브 부근에서
+  // 필연적으로 무너지도록 만드는 핵심 장치 (침식이 없으면 골드 성장률(1.14)이 요구 화력 성장률(1.085)을
+  // 항상 앞서 CPU가 사실상 불사신이 되어버리는 문제가 있었음 - 시뮬레이션으로 검증 후 보정).
+  var decayFactor=1.085*(1+Math.pow(cpu.fatigue,1.4)*4.5);
+  cpu.power/=decayFactor;
   cpu.gold+=Math.round(20*Math.pow(1.14,cpu.wave-1));
   cpuAiSpend(cpu);
-  var req=40*Math.pow(1.085,cpu.wave);
+  var req=40*Math.pow(1.085,cpu.wave); // 목숨 손실 판정 공식 - 기존 그대로 유지 (절대 편법으로 HP를 깎거나 지키지 않음)
   if(cpu.power<req){
     var shortfall=(req-cpu.power)/req;
     var loss=Math.max(0, Math.round(shortfall*3-cpu.params.econEff));
@@ -2534,6 +2716,8 @@ function resetGame(forBattle){
   var dpsPanelEl0=document.getElementById('tdDpsMeterPanel');
   if(dpsPanelEl0) dpsPanelEl0.style.display='none';
   G.autoPlayMode=false; G.autoPlayAcc=0; G.autoPlayNextAt=1.8;
+  // [Auto Play AI 개편] 합성 판단용 지연 타이머 초기화 (새 게임/리셋마다 초기화됨)
+  G.autoPlayFusionSince=null; G.autoPlayPendingFusionDelay=null;
   var apBtn=document.getElementById('tdAutoPlayBtn');
   if(apBtn){ apBtn.classList.remove('tdActive'); apBtn.querySelector('.tdCtrlLabel').textContent='오토플레이 OFF'; }
   G.shakeTime=0; G.shakeMag=0; G.waveBanner=null; G.timeAcc=0;
@@ -4065,10 +4249,47 @@ function autoPlayUpgrade(){
   var cost=upgradeCost(t);
   if(G.money>=cost*1.4){ upgradeTower(t); }
 }
+// [Auto Play AI 개편] 오토플레이 전용 실력치 - CPU의 실버~낮은 플래티넘 정도로 고정된 값.
+// "좋은 사람 플레이어를 절대 능가하면 안 된다"는 요구사항에 따라 CPU_TIER_PROFILE의 platinum보다 낮게 고정.
+var AUTO_PLAY_PROFILE={ econEff:0.58, mistakeChance:0.14, waitChance:0.16, suboptimalChance:0.24, fusionDelayTicks:[2,5] };
+// [Auto Play AI 개편] 합성 재료(3개)가 갖춰져도 사람처럼 바로 합성하지 않고 몇 틱을 기다렸다가 합성함
+function autoPlayFusionDecision(group){
+  if(G.autoPlayFusionSince===null){
+    G.autoPlayFusionSince=0;
+    var r=AUTO_PLAY_PROFILE.fusionDelayTicks;
+    G.autoPlayPendingFusionDelay=r[0]+Math.random()*(r[1]-r[0]);
+    return false;
+  }
+  G.autoPlayFusionSince++;
+  if(G.autoPlayFusionSince>=G.autoPlayPendingFusionDelay){
+    G.autoPlayFusionSince=null; G.autoPlayPendingFusionDelay=null;
+    return true;
+  }
+  return false;
+}
+// [Auto Play AI 개편] 기존의 "40% 확률로 업그레이드, 아니면 건설" 단순 로직을
+// Think -> Analyze(Wave/Economy/Towers) -> Choose Action -> Execute 구조로 교체.
+// 실수(mistakeChance)로 턴을 흘려보내거나, 일부러 대기/저축하는 등 사람다운 빈틈을 남기고,
+// 실력 자체는 AUTO_PLAY_PROFILE로 캡되어 있어 "좋은 사람 플레이어"를 넘어서지 않는다.
 function autoPlayTick(){
   if(!G.autoPlayMode || G.gameOver || G.manualPause || G.choosing) return;
   var haveTowers=Object.keys(G.towers).length>0;
+
+  // ---- THINK: 순수하게 턴을 흘려보내는 실수 (사람도 가끔 멍하니 있는다) ----
+  if(Math.random()<AUTO_PLAY_PROFILE.mistakeChance) return;
+
+  // ---- ANALYZE: 합성 가능한 그룹이 있는지 먼저 살핌 ----
+  var groups=haveTowers? fusableGroups().filter(function(g){ return g.towers.length>=3; }) : [];
+  if(groups.length>0 && autoPlayFusionDecision(groups[0])){
+    fuseGroup(groups[0].kind, groups[0].grade);
+    return;
+  }
+
+  // ---- CHOOSE ACTION: 대기(저축) 확률을 먼저 굴리고, 아니면 업그레이드/건설 중 선택 ----
+  if(Math.random()<AUTO_PLAY_PROFILE.waitChance) return; // 골드를 좀 더 모아보자는 판단
   var doUpgrade = haveTowers && Math.random()<0.4;
+
+  // ---- EXECUTE ----
   if(doUpgrade) autoPlayUpgrade(); else autoPlayBuild();
 }
 
