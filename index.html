@@ -285,6 +285,17 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
         </div>
       </div>
     </div>
+    <div id="tdBulkBuildMenu" style="position:absolute; top:0; left:0; right:0; bottom:0; display:none; align-items:center; justify-content:center; z-index:20; pointer-events:none;">
+      <div style="pointer-events:auto; background:rgba(15,18,26,0.94); border:1px solid rgba(240,185,11,0.5); border-radius:12px; padding:14px 16px; max-width:260px; width:90%; text-align:center; color:#fff; box-shadow:0 10px 30px rgba(0,0,0,0.55);">
+        <div id="tdBulkBuildTitle" style="font-size:13px; font-weight:700; margin-bottom:2px;">일괄 건설</div>
+        <div style="font-size:10px; opacity:0.7; margin-bottom:10px;">기준 칸을 눌러 배치할 크기를 선택하세요</div>
+        <div style="display:flex; flex-direction:column; gap:7px;">
+          <button id="tdBulk2x2Btn" style="padding:9px; font-size:12px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200;">2×2 (4개) <span id="tdBulk2x2Cost" style="font-weight:500; opacity:0.85;"></span></button>
+          <button id="tdBulk3x3Btn" style="padding:9px; font-size:12px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200;">3×3 (9개) <span id="tdBulk3x3Cost" style="font-weight:500; opacity:0.85;"></span></button>
+          <button id="tdBulkCloseBtn" style="padding:8px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff; margin-top:2px;">닫기</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;">
@@ -393,6 +404,92 @@ function fmt(n){
   return num.toLocaleString('ko-KR');
 }
 
+// ===== AssetManager =====
+// assets/<key>.png(또는 .svg) 형태의 이미지를 지연 로드·캐싱하며, 로드 성공 여부에 따라
+// 렌더링 코드가 "이미지가 있으면 그리고, 없으면 기존 도형을 그대로 유지"하도록 지원한다.
+// assets 폴더에 정해진 파일명으로 PNG를 추가하기만 하면 코드 수정 없이 자동으로 적용된다.
+// PNG가 없으면 같은 이름의 SVG를 자동으로 대신 탐색한다 (PNG 우선, 없으면 SVG 폴백).
+var AssetManager=(function(){
+  var ASSET_BASE='assets/';
+  var entries={}; // key -> {img, status:'loading'|'loaded'|'error', callbacks:[fn], triedSvg:bool}
+  function pathFor(key, ext){ return ASSET_BASE+key+'.'+ext; }
+  function ensure(key){
+    var e=entries[key];
+    if(e) return e;
+    e={img:new Image(), status:'loading', callbacks:[], triedSvg:false};
+    entries[key]=e;
+    function finalizeLoaded(){
+      e.status='loaded';
+      var cbs=e.callbacks; e.callbacks=[];
+      cbs.forEach(function(cb){ try{ cb(true); }catch(err){} });
+    }
+    function finalizeError(){
+      e.status='error';
+      var cbs=e.callbacks; e.callbacks=[];
+      cbs.forEach(function(cb){ try{ cb(false); }catch(err){} });
+    }
+    e.img.onload=finalizeLoaded;
+    e.img.onerror=function(){
+      if(!e.triedSvg){
+        // PNG를 찾지 못했으면 같은 키의 SVG를 한 번 더 시도
+        e.triedSvg=true;
+        e.img.onerror=finalizeError;
+        e.img.src=pathFor(key,'svg');
+      } else {
+        finalizeError();
+      }
+    };
+    e.img.src=pathFor(key,'png');
+    return e;
+  }
+  // 존재 여부 확인 (로드가 아직 안 됐다면 이 호출이 로드를 트리거함 - 자동 로드)
+  function has(key){
+    return ensure(key).status==='loaded';
+  }
+  // 로드를 시도했지만 실패(파일 없음/깨짐)한 것이 확실한 경우만 true
+  function isMissing(key){
+    var e=entries[key];
+    return !!e && e.status==='error';
+  }
+  function get(key){
+    var e=entries[key];
+    return (e && e.status==='loaded')? e.img : null;
+  }
+  // 여러 키를 한 번에 미리 로드 (비동기, 논블로킹)
+  function preload(keys){ keys.forEach(ensure); }
+  // 로드가 끝난 뒤(성공/실패 확정 시) 콜백 실행 - 이미 끝났으면 즉시 실행
+  function onReady(key, cb){
+    var e=ensure(key);
+    if(e.status==='loaded') cb(true);
+    else if(e.status==='error') cb(false);
+    else e.callbacks.push(cb);
+  }
+  function allKeys(){ return Object.keys(entries); }
+  function statusOf(key){ var e=entries[key]; return e? e.status : 'unrequested'; }
+  return {has:has, isMissing:isMissing, get:get, preload:preload, onReady:onReady, allKeys:allKeys, statusOf:statusOf};
+})();
+// 전체 에셋 키 목록 (타워/적/보스/투사체/타일/UI) - AI_ASSET_PROMPTS.md의 파일명과 1:1 대응
+var ASSET_CATALOG={
+  towers:['basic','sniper','gatling','missile','explosive','frost','berserker','piercer','pierceSniper','lightning','commander','poison','laser','plasma','blackhole','nova'],
+  enemies:['normal','armored','rush','flying','regen','thief','split','ironclad','titan','cloner','phantom','vampire','crate'],
+  bosses:['juggernaut','summoner','warlord','miniboss'],
+  projectiles:['bullet','sniperBeam','pierceSniperBeam','laserBeam','lightningChain','blackholeField'],
+  tiles:(function(){
+    var themes=['greenMeadow','abyssOcean','fantasyKingdom','infernalRift'];
+    var variants=['board','boardAlt','path'];
+    var out=[];
+    themes.forEach(function(th){ variants.forEach(function(v){ out.push(th+'_'+v); }); });
+    return out;
+  })(),
+  ui:['speed','pause','play','fusion','lab','soundOn','soundOff','musicOn','musicOff','sun','moon','upgrade','coin','close','sword','target','turret','auto','kills','passive','trophy','zoom','exit','bot','dps','title']
+};
+function preloadAllAssets(){
+  Object.keys(ASSET_CATALOG).forEach(function(folder){
+    AssetManager.preload(ASSET_CATALOG[folder].map(function(name){ return folder+'/'+name; }));
+  });
+}
+preloadAllAssets();
+
 var ICONS={
   speed:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 5v14l9-7z"/><path d="M13 5v14l9-7z"/></svg>',
   pause:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>',
@@ -420,6 +517,20 @@ var ICONS={
   bot:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.3" fill="currentColor" stroke="none"/><path d="M12 8V4M9 4h6"/></svg>',
   dps:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="12" width="3.5" height="8"/><rect x="10.25" y="7" width="3.5" height="13"/><rect x="16.5" y="3" width="3.5" height="17"/></svg>'
 };
+// 상태에 따라 아이콘이 바뀌지 않는(정적) 버튼만 PNG 에셋으로 자동 교체 (있으면 이미지, 없으면 기존 SVG 유지)
+// 일시정지/음악/효과음/테마 아이콘은 재생 상태에 따라 다른 SVG로 바뀌는 로직이 따로 있어 대상에서 제외 (충돌 방지)
+function applyIconAssetIfAvailable(elId, assetKey){
+  AssetManager.onReady(assetKey, function(ok){
+    if(!ok) return;
+    var el=document.getElementById(elId);
+    if(!el) return;
+    var img=AssetManager.get(assetKey);
+    el.innerHTML='';
+    var imgEl=img.cloneNode();
+    imgEl.style.width='16px'; imgEl.style.height='16px'; imgEl.style.display='block';
+    el.appendChild(imgEl);
+  });
+}
 function initIcons(){
   document.getElementById('tdSpeedIcon').innerHTML=ICONS.speed;
   document.getElementById('tdPauseIcon').innerHTML=ICONS.pause;
@@ -438,6 +549,19 @@ function initIcons(){
   document.getElementById('tdAutoPlayIcon').innerHTML=ICONS.bot;
   document.getElementById('tdDpsMeterIcon').innerHTML=ICONS.dps;
   document.getElementById('tdTitleIcon').innerHTML='<svg viewBox="0 0 64 64" width="52" height="52"><defs><linearGradient id="tdTitleGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F0B90B"/><stop offset="100%" stop-color="#E24B4A"/></linearGradient></defs><polygon points="32,4 40,20 24,20" fill="url(#tdTitleGrad)"/><rect x="27" y="18" width="10" height="16" rx="2" fill="url(#tdTitleGrad)"/><circle cx="32" cy="42" r="18" fill="none" stroke="url(#tdTitleGrad)" stroke-width="3.5"/><circle cx="32" cy="42" r="6" fill="url(#tdTitleGrad)"/></svg>';
+  applyIconAssetIfAvailable('tdSpeedIcon','ui/speed');
+  applyIconAssetIfAvailable('tdFusionIcon','ui/fusion');
+  applyIconAssetIfAvailable('tdUpgradeAllIcon','ui/upgrade');
+  applyIconAssetIfAvailable('tdLabIcon','ui/lab');
+  applyIconAssetIfAvailable('tdAutoChoiceIcon','ui/auto');
+  applyIconAssetIfAvailable('tdKillDisplayIcon','ui/kills');
+  applyIconAssetIfAvailable('tdPassiveIcon','ui/passive');
+  applyIconAssetIfAvailable('tdRankIcon','ui/trophy');
+  applyIconAssetIfAvailable('tdZoomIcon','ui/zoom');
+  applyIconAssetIfAvailable('tdExitIcon','ui/exit');
+  applyIconAssetIfAvailable('tdAutoPlayIcon','ui/bot');
+  applyIconAssetIfAvailable('tdDpsMeterIcon','ui/dps');
+  applyIconAssetIfAvailable('tdTitleIcon','ui/title');
 }
 
 var THEME_VARS={
@@ -989,6 +1113,35 @@ var TOWER_VISUALS={
   commander:{barrels:0, ring:true}
 };
 function drawTowerBody(t, R, bw, barrelLen, barrelW){
+  var towerAssetKey='towers/'+t.kind;
+  if(AssetManager.has(towerAssetKey)){
+    ctx.save();
+    ctx.translate(t.px,t.py);
+    if(t.buildAnimT>0){
+      var bpImg=1-(t.buildAnimT/350);
+      var sImg=0.3+0.7*easeOutBack(Math.min(1,bpImg));
+      ctx.scale(Math.max(0.05,sImg), Math.max(0.05,sImg));
+      ctx.globalAlpha=Math.min(1, bpImg*1.6);
+    }
+    ctx.save();
+    ctx.globalAlpha*=0.28;
+    ctx.beginPath(); ctx.ellipse(1.5,bw*0.44,bw*0.52,bw*0.2,0,0,Math.PI*2);
+    ctx.fillStyle='#000'; ctx.fill();
+    ctx.restore();
+    ctx.rotate(t.hasTarget? t.angle : 0); // 평소엔 고정, 공격 대상이 있을 때만 조준 방향으로 회전
+    var towerImg=AssetManager.get(towerAssetKey);
+    var towerSz=bw*1.9;
+    ctx.drawImage(towerImg,-towerSz/2,-towerSz/2,towerSz,towerSz);
+    if(t.upgradeFlashT>0){
+      ctx.globalAlpha=Math.max(0,t.upgradeFlashT/300)*0.75;
+      ctx.beginPath(); ctx.arc(0,0,bw*0.85,0,Math.PI*2);
+      ctx.strokeStyle='#FFE066'; ctx.lineWidth=3;
+      ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
+    return;
+  }
   var vis=TOWER_VISUALS[t.kind]||{barrels:1, barrelWMult:1, barrelLenMult:1, tip:'circle'};
   ctx.save();
   ctx.translate(t.px,t.py);
@@ -2131,6 +2284,12 @@ var MONSTER_SHAPE_FN={
   armored:pathBeetle, ironclad:pathHex, flying:pathBat, split:pathPeanut,
   titan:pathRock, phantom:pathGhost, vampire:pathCloak, crate:pathRoundedBox
 };
+// 몹/보스/미니보스에 대응하는 에셋 키 계산 (bosses/ 또는 enemies/ 폴더)
+function enemyAssetKey(en){
+  if(en.isBoss) return 'bosses/'+(en.bossType||'juggernaut');
+  if(en.type==='miniboss') return 'bosses/miniboss';
+  return 'enemies/'+en.type;
+}
 function drawEnemySilhouette(en,by,heading){
   if(en.type==='rush'){ pathRush(en,by,heading); return; }
   var fn=MONSTER_SHAPE_FN[en.type];
@@ -2367,7 +2526,7 @@ function resetGame(forBattle){
   G.spawnGap=600; G.remainingToSpawn=0; G.spawnTimer=0; G.bossQueued=false; G.miniBossQueued=false;
   G.crateWave=0; G.crateSpawned=false; G.lastPlacement=null;
   G.enemies=[]; G.towers={}; G.projectiles=[]; G.particles=[]; G.rings=[]; G.floaters=[]; G.lasers=[]; G.floatersSuppressed=false; G.perfSimpleMode=false;
-  G.selectedTower=null; G.placeType=null; G.hoverCell=null;
+  G.selectedTower=null; G.placeType=null; G.bulkBuildSize=null; G.hoverCell=null;
   G.fusionMode=false; G.fusionSelection=[];
   G.speedMult=1; G.paused=true; G.manualPause=false; G.gameOver=false; G.choosing=false;
   G.autoChoice=false; G.showKillCounts=false; G.battleHudCollapsed=false;
@@ -2869,6 +3028,7 @@ function update(dt){
         if(prog>bestProg){ bestProg=prog; best=en; }
       }
     }
+    t.hasTarget=!!best; // 이미지 렌더링에서 "공격 중일 때만 회전" 표시용 (조준 로직 자체는 변경하지 않음)
 
     var desired = best? Math.atan2(best.y-t.py,best.x-t.px) : t.angle+sdt*0.6;
     if(best){
@@ -2899,7 +3059,7 @@ function update(dt){
       if(t.kind==='sniper'){
         dealDamage(best,dmgVal,t.key);
         applySpecialProcs(dmgVal,best,t.key);
-        G.lasers.push({x1:tip.x,y1:tip.y,x2:best.x,y2:best.y,life:150,maxLife:150,color:t.dark,width:2});
+        G.lasers.push({x1:tip.x,y1:tip.y,x2:best.x,y2:best.y,life:150,maxLife:150,color:t.dark,width:2,kind:'sniperBeam'});
       } else if(t.kind==='pierceSniper'){
         var psx=t.px+Math.cos(t.angle)*tRange, psy=t.py+Math.sin(t.angle)*tRange;
         var psHits=[];
@@ -2913,7 +3073,7 @@ function update(dt){
         var psN=Math.min(t.pierceLimit||2, psHits.length);
         for(var psj=0;psj<psN;psj++){ dealDamage(psHits[psj], psj===0? dmgVal : dmgVal*0.6, t.key); }
         applySpecialProcs(dmgVal,best,t.key);
-        G.lasers.push({x1:t.px,y1:t.py,x2:psx,y2:psy,life:160,maxLife:160,color:t.color,width:2.5});
+        G.lasers.push({x1:t.px,y1:t.py,x2:psx,y2:psy,life:160,maxLife:160,color:t.color,width:2.5,kind:'pierceSniperBeam'});
       } else if(t.kind==='laser'){
         var ex=t.px+Math.cos(t.angle)*tRange, ey=t.py+Math.sin(t.angle)*tRange;
         for(var li=0;li<G.enemies.length;li++){
@@ -2922,7 +3082,7 @@ function update(dt){
           if(pointSegDist(len2.x,len2.y,t.px,t.py,ex,ey)<=8) dealDamage(len2,dmgVal,t.key);
         }
         applySpecialProcs(dmgVal,best,t.key);
-        G.lasers.push({x1:t.px,y1:t.py,x2:ex,y2:ey,life:180,maxLife:180,color:t.color,width:4});
+        G.lasers.push({x1:t.px,y1:t.py,x2:ex,y2:ey,life:180,maxLife:180,color:t.color,width:4,kind:'laserBeam'});
       } else if(t.kind==='lightning'){
         var hitSet=[best];
         dealDamage(best,dmgVal,t.key);
@@ -2941,7 +3101,7 @@ function update(dt){
           if(!nextEn) break;
           dealDamage(nextEn, dmgVal*Math.pow(t.falloff,ci), t.key);
           if(nextEn.poisonTime>0) nextEn.poisonTime=Math.min(5000, nextEn.poisonTime+1000);
-          G.lasers.push({x1:curEn.x,y1:curEn.y,x2:nextEn.x,y2:nextEn.y,life:220,maxLife:220,color:t.color,width:2.5});
+          G.lasers.push({x1:curEn.x,y1:curEn.y,x2:nextEn.x,y2:nextEn.y,life:220,maxLife:220,color:t.color,width:2.5,kind:'lightningChain'});
           hitSet.push(nextEn);
           curEn=nextEn;
         }
@@ -3110,13 +3270,21 @@ function render(){
     ctx.translate((Math.random()-0.5)*G.shakeMag, (Math.random()-0.5)*G.shakeMag);
   }
 
+  var tileImgBoard=AssetManager.get('tiles/'+currentFieldTheme+'_board');
+  var tileImgBoardAlt=AssetManager.get('tiles/'+currentFieldTheme+'_boardAlt');
+  var tileImgPath=AssetManager.get('tiles/'+currentFieldTheme+'_path');
   for(var gy=0;gy<ROWS;gy++){
     for(var gx=0;gx<COLS;gx++){
       var onPath=isPath(gx,gy);
-      if(onPath) ctx.fillStyle=COL.path;
-      else ctx.fillStyle=((gx+gy)%2===0)?COL.board:COL.boardAlt;
-      ctx.fillRect(gx*TILE,gy*TILE,TILE,TILE);
-      if(!onPath) drawTileDeco(gx,gy);
+      var tileImg = onPath? tileImgPath : (((gx+gy)%2===0)? tileImgBoard : tileImgBoardAlt);
+      if(tileImg){
+        ctx.drawImage(tileImg, gx*TILE, gy*TILE, TILE, TILE);
+      } else {
+        if(onPath) ctx.fillStyle=COL.path;
+        else ctx.fillStyle=((gx+gy)%2===0)?COL.board:COL.boardAlt;
+        ctx.fillRect(gx*TILE,gy*TILE,TILE,TILE);
+        if(!onPath) drawTileDeco(gx,gy);
+      }
       ctx.strokeStyle=COL.border; ctx.lineWidth=0.5;
       ctx.strokeRect(gx*TILE,gy*TILE,TILE,TILE);
     }
@@ -3235,6 +3403,22 @@ function render(){
 
   G.lasers.forEach(function(l){
     var a=l.life/l.maxLife;
+    var beamAssetKey=l.kind? ('projectiles/'+l.kind) : null;
+    if(beamAssetKey && AssetManager.has(beamAssetKey)){
+      var beamImg=AssetManager.get(beamAssetKey);
+      var dx=l.x2-l.x1, dy=l.y2-l.y1;
+      var len=Math.max(1,Math.hypot(dx,dy));
+      var ang=Math.atan2(dy,dx);
+      var beamH=(l.width||2)*5; // 텍스처가 얇은 라인보다 도드라져 보이도록 두께를 넉넉히 확보
+      ctx.save();
+      ctx.globalAlpha=a;
+      ctx.translate(l.x1,l.y1);
+      ctx.rotate(ang);
+      ctx.drawImage(beamImg, 0, -beamH/2, len, beamH);
+      ctx.restore();
+      ctx.globalAlpha=1;
+      return;
+    }
     ctx.globalAlpha=a;
     ctx.shadowBlur=10; ctx.shadowColor=l.color;
     ctx.strokeStyle=l.color; ctx.lineWidth=(l.width||2)+2;
@@ -3264,6 +3448,13 @@ function render(){
     ctx.ellipse(en.x, shY, shR, shR*0.4, 0, 0, Math.PI*2);
     ctx.fillStyle='#000'; ctx.fill();
     ctx.restore();
+    var useEnemyImage = !flashing && AssetManager.has(enemyAssetKey(en));
+    if(useEnemyImage){
+      // 에셋 이미지가 있으면 절차적 실루엣/다리/날개/얼굴 장식 전체를 이미지로 대체
+      var enemyImg=AssetManager.get(enemyAssetKey(en));
+      var enemySz=en.r*2.6;
+      ctx.drawImage(enemyImg, en.x-enemySz/2, by-enemySz/2, enemySz, enemySz);
+    } else {
     // 비행 몬스터 날개 (본체 뒤쪽에 그려서 겹침) - 개체수 많을 때는 생략
     if(en.type==='flying' && !flashing && !perfSimple){
       var wingFlap=Math.sin(en.bob*3)*0.5+0.5;
@@ -3326,6 +3517,7 @@ function render(){
         ctx.closePath(); ctx.fill();
       }
     }
+    } // end useEnemyImage else
     ctx.shadowBlur=0;
     if(en.elite){
       var eliteRingColor = en.elite==='resist'? 'rgba(179,157,219,0.9)' : en.elite==='regen'? 'rgba(126,217,87,0.9)' : en.elite==='swift'? 'rgba(90,200,250,0.9)' : 'rgba(255,215,0,0.9)';
@@ -3383,11 +3575,16 @@ function render(){
     ctx.globalAlpha=1;
   });
 
+  var bulletImg=AssetManager.get('projectiles/bullet');
   for(var p2=0;p2<G.projectiles.length;p2++){
     var pr2=G.projectiles[p2];
-    ctx.shadowBlur=6; ctx.shadowColor=pr2.color;
-    ctx.fillStyle=pr2.color;
-    ctx.beginPath(); ctx.arc(pr2.x,pr2.y,3,0,Math.PI*2); ctx.fill();
+    if(bulletImg){
+      ctx.drawImage(bulletImg, pr2.x-6, pr2.y-6, 12, 12);
+    } else {
+      ctx.shadowBlur=6; ctx.shadowColor=pr2.color;
+      ctx.fillStyle=pr2.color;
+      ctx.beginPath(); ctx.arc(pr2.x,pr2.y,3,0,Math.PI*2); ctx.fill();
+    }
   }
   ctx.shadowBlur=0;
 
@@ -3758,9 +3955,12 @@ function updateSelInfo(){
     var abilityHtml2 = abilities2.length
       ? '<div style="margin-top:4px;">'+abilities2.map(function(l){ return '<div>• '+l+'</div>'; }).join('')+'</div>'
       : '';
+    var bulkHtml = G.bulkBuildSize
+      ? '<div style="margin-top:4px; color:#F0B90B; font-weight:600;">'+G.bulkBuildSize+'×'+G.bulkBuildSize+' 일괄 건설 모드 (기준 칸부터 '+(G.bulkBuildSize*G.bulkBuildSize)+'개)</div>'
+      : '';
     box.innerHTML='<div style="font-weight:500; color:var(--text-primary); margin-bottom:4px;">'+def.name+' 배치 모드</div>'+
       '<div>비용 '+fmt(cost)+'골드 / 공격력 '+fmt(def.dmg)+' / 사거리 '+def.range+'</div>'+
-      abilityHtml2+
+      abilityHtml2+ bulkHtml +
       '<div style="margin-top:4px;">빈 칸을 탭해 배치하세요.</div>';
   } else {
     box.innerHTML='타워를 탭하면 업그레이드/판매 메뉴가 뜹니다.';
@@ -4151,14 +4351,65 @@ canvas.addEventListener('click', function(evt){
     return;
   }
   if(G.towers[key]){
-    G.selectedTower=G.towers[key]; G.placeType=null;
+    G.selectedTower=G.towers[key]; G.placeType=null; G.bulkBuildSize=null;
     showTowerPopup(G.towers[key]);
     updateSelInfo();
     return;
   }
   hideTowerPopup();
-  if(G.placeType){ placeTower(c[0],c[1]); updateSelInfo(); }
+  if(G.placeType){
+    if(G.bulkBuildSize){ placeTowerBlock(c[0],c[1],G.bulkBuildSize,G.placeType); }
+    else { placeTower(c[0],c[1]); }
+    updateSelInfo();
+  }
 });
+// 기준 칸(gx,gy)을 좌상단으로 하는 size x size 블록에 같은 타워를 한 번에 배치 (칸이 경로/이미 점유/자금 부족이면 해당 칸만 건너뜀)
+function placeTowerBlock(gx,gy,size,kind){
+  for(var dy=0; dy<size; dy++){
+    for(var dx=0; dx<size; dx++){
+      placeTower(gx+dx, gy+dy, kind);
+    }
+  }
+}
+
+// 타워 칩을 길게 누르면 2x2/3x3 일괄 건설 메뉴가 뜬다 (짧게 누르면 기존처럼 단일 배치 모드)
+var bulkBuildKey=null;
+function towerLockedReason(key){
+  var def2=TOWER_DEFS[key];
+  if(def2.unlockWave && G.wave<def2.unlockWave) return def2.name+'은(는) 웨이브 '+def2.unlockWave+'부터 해금됩니다';
+  if(def2.maxCount && towerCountOfKind(key)>=def2.maxCount) return def2.name+'은(는) 최대 '+def2.maxCount+'개까지만 건설할 수 있습니다';
+  return null;
+}
+function openBulkBuildMenu(key){
+  if(pauseBlocked()) return;
+  var reason=towerLockedReason(key);
+  if(reason){ G.waveBanner={text:reason, life:1200, maxLife:1200, boss:false}; return; }
+  var def=TOWER_DEFS[key];
+  bulkBuildKey=key;
+  var unitCost=Math.round(def.cost*G.buffDiscount);
+  var cost4=unitCost*4, cost9=unitCost*9;
+  document.getElementById('tdBulkBuildTitle').textContent=def.name+' 일괄 건설';
+  document.getElementById('tdBulk2x2Cost').textContent='('+fmt(cost4)+'골드)';
+  document.getElementById('tdBulk3x3Cost').textContent='('+fmt(cost9)+'골드)';
+  var btn2=document.getElementById('tdBulk2x2Btn'), btn3=document.getElementById('tdBulk3x3Btn');
+  var afford4=G.money>=cost4, afford9=G.money>=cost9;
+  btn2.disabled=!afford4; btn2.style.opacity=afford4? '1':'0.4';
+  btn3.disabled=!afford9; btn3.style.opacity=afford9? '1':'0.4';
+  document.getElementById('tdBulkBuildMenu').style.display='flex';
+}
+function closeBulkBuildMenu(){
+  document.getElementById('tdBulkBuildMenu').style.display='none';
+}
+function selectBulkBuild(size){
+  hideTowerPopup();
+  G.fusionMode=false; G.fusionSelection=[];
+  G.placeType=bulkBuildKey; G.bulkBuildSize=size; G.selectedTower=null;
+  updateSelInfo();
+  closeBulkBuildMenu();
+}
+document.getElementById('tdBulk2x2Btn').addEventListener('click', function(){ if(!this.disabled) selectBulkBuild(2); });
+document.getElementById('tdBulk3x3Btn').addEventListener('click', function(){ if(!this.disabled) selectBulkBuild(3); });
+document.getElementById('tdBulkCloseBtn').addEventListener('click', closeBulkBuildMenu);
 
 var towerGrid=document.getElementById('tdTowerGrid');
 ORDER.forEach(function(key){
@@ -4169,19 +4420,29 @@ ORDER.forEach(function(key){
   btn.innerHTML='<div class="tdChipIcon" style="background:'+def.color+';">'+ICONS.turret+'</div>'
     +'<div class="tdChipName">'+def.name+'</div>'
     +'<div class="tdChipCost" data-role="cost"></div>';
+  var longPressTimer=null, longPressFired=false;
+  btn.addEventListener('pointerdown', function(){
+    longPressFired=false;
+    clearTimeout(longPressTimer);
+    longPressTimer=setTimeout(function(){
+      longPressFired=true;
+      openBulkBuildMenu(key);
+    }, 500);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(evName){
+    btn.addEventListener(evName, function(){ clearTimeout(longPressTimer); });
+  });
   btn.addEventListener('click', function(){
-    var def2=TOWER_DEFS[key];
-    if(def2.unlockWave && G.wave<def2.unlockWave){
-      G.waveBanner={text:def2.name+'은(는) 웨이브 '+def2.unlockWave+'부터 해금됩니다', life:1200, maxLife:1200, boss:false};
-      return;
-    }
-    if(def2.maxCount && towerCountOfKind(key)>=def2.maxCount){
-      G.waveBanner={text:def2.name+'은(는) 최대 '+def2.maxCount+'개까지만 건설할 수 있습니다', life:1200, maxLife:1200, boss:false};
+    if(longPressFired){ longPressFired=false; return; } // 길게 눌러 메뉴가 뜬 경우엔 짧은 클릭 동작을 무시
+    var reason=towerLockedReason(key);
+    if(reason){
+      G.waveBanner={text:reason, life:1200, maxLife:1200, boss:false};
       return;
     }
     hideTowerPopup();
     G.fusionMode=false; G.fusionSelection=[];
     G.placeType = (G.placeType===key)? null : key;
+    G.bulkBuildSize=null;
     G.selectedTower=null;
     updateSelInfo();
   });
@@ -4682,7 +4943,7 @@ document.getElementById('tdPauseBtn').addEventListener('click', function(){
 document.getElementById('tdFusionBtn').addEventListener('click', function(){
   if(pauseBlocked()) return;
   hideTowerPopup();
-  G.placeType=null; G.selectedTower=null;
+  G.placeType=null; G.bulkBuildSize=null; G.selectedTower=null;
   updateSelInfo();
   openFusion();
 });
