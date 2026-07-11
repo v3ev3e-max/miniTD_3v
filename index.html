@@ -311,7 +311,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       </svg>
       <button id="tdAutoChoiceBtn" class="tdCtrlBtn" style="position:relative;"><span class="tdCtrlIcon" id="tdAutoChoiceIcon"></span><span class="tdCtrlLabel">웨이브 자동선택 OFF</span></button>
     </div>
-    <button id="tdDpsMeterBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdDpsMeterIcon"></span><span class="tdCtrlLabel">딜 미터기 ON</span></button>
+    <button id="tdDpsMeterBtn" class="tdCtrlBtn tdActive"><span class="tdCtrlIcon" id="tdDpsMeterIcon"></span><span class="tdCtrlLabel">딜 미터기 ON</span></button>
     <button id="tdKillDisplayBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdKillDisplayIcon"></span><span class="tdCtrlLabel">타워 킬수 표시</span></button>
     <button id="tdPassiveBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdPassiveIcon"></span><span class="tdCtrlLabel">보유 패시브</span></button>
     <!-- 세번째 그룹: 화면/설정 -->
@@ -851,18 +851,22 @@ function renderDpsMeter(){
   if(!dpsDisplayList.length){ body.innerHTML='<div style="opacity:0.6;">교전 데이터 없음</div>'; return; }
   var total=dpsDisplayList.reduce(function(s,d){ return s+d.dps; },0);
   if(total<=0){ body.innerHTML='<div style="opacity:0.6;">교전 데이터 없음</div>'; return; }
-  body.innerHTML=dpsDisplayList.map(function(d){
+  var html='<div style="font-size:9.5px; opacity:0.8; margin-bottom:4px; white-space:nowrap;">총 딜량 '+fmt(total)+'/s</div>';
+  html+=dpsDisplayList.map(function(d){
     var pct=Math.max(0,Math.round(d.dps/total*100));
     return '<div style="margin-bottom:4px;">'
       +'<div style="display:flex; justify-content:space-between; gap:6px; font-size:9.5px; margin-bottom:2px; white-space:nowrap;"><span>'+escapeHtml(d.name)+'</span><span>'+pct+'%</span></div>'
       +'<div style="height:6px; border-radius:3px; background:rgba(255,255,255,0.1); overflow:hidden;"><div style="height:100%; width:'+pct+'%; background:'+d.color+'; border-radius:3px;"></div></div>'
     +'</div>';
   }).join('');
+  body.innerHTML=html;
 }
 function applyDpsMeterVisibility(){
   var panel=document.getElementById('tdDpsMeterPanel');
   if(!panel) return;
-  panel.style.display = dpsMeterOn? 'flex' : 'none';
+  var inTitle = document.getElementById('tdStartOverlay').style.display==='flex';
+  var show = dpsMeterOn && !inTitle && !G.gameOver;
+  panel.style.display = show? 'flex' : 'none';
   panel.style.flexDirection='column';
 }
 function applyDpsMeterCollapsed(){
@@ -1138,6 +1142,8 @@ function triggerGameOver(forced){
   G.gameOver=true;
   clearInProgressGame();
   pendingResume=null;
+  var dpsPanelEl=document.getElementById('tdDpsMeterPanel');
+  if(dpsPanelEl) dpsPanelEl.style.display='none';
   var resumeBtnEl=document.getElementById('tdResumeBtn');
   if(resumeBtnEl) resumeBtnEl.style.display='none';
   sessionBest=Math.max(sessionBest,G.wave);
@@ -2247,6 +2253,9 @@ function resetGame(forBattle){
   G.fusionMode=false; G.fusionSelection=[];
   G.speedMult=1; G.paused=true; G.manualPause=false; G.gameOver=false; G.choosing=false;
   G.autoChoice=false; G.showKillCounts=false; G.battleHudCollapsed=false;
+  resetDpsMeterData();
+  var dpsPanelEl0=document.getElementById('tdDpsMeterPanel');
+  if(dpsPanelEl0) dpsPanelEl0.style.display='none';
   G.autoPlayMode=false; G.autoPlayAcc=0; G.autoPlayNextAt=1.8;
   var apBtn=document.getElementById('tdAutoPlayBtn');
   if(apBtn){ apBtn.classList.remove('tdActive'); apBtn.querySelector('.tdCtrlLabel').textContent='오토플레이 OFF'; }
@@ -2527,6 +2536,7 @@ function applyRawDamage(en,dmg,towerKey){
   en.hp-=amt;
   en.flashTime=50;
   if(towerKey) en.lastHitTowerKey=towerKey;
+  recordDpsDamage(towerKey, amt);
   spawnDamageFloater(en.x,en.y-en.r-4,amt,null);
 }
 function dealDamage(en, dmg, towerKey){
@@ -2537,6 +2547,7 @@ function dealDamage(en, dmg, towerKey){
   en.hp-=amount;
   en.flashTime=50;
   if(towerKey) en.lastHitTowerKey=towerKey;
+  recordDpsDamage(towerKey, amount);
   spawnDamageFloater(en.x, en.y-en.r-4, amount, crit?'crit':null);
   sfxHit();
   if(crit){
@@ -2579,6 +2590,7 @@ function update(dt){
   if(G.gameOver) return;
   var sdt=dt*G.speedMult;
   G.timeAcc+=sdt;
+  tickDpsMeter(dt);
 
   G.progressSaveAcc=(G.progressSaveAcc||0)+dt;
   if(G.progressSaveAcc>25){ G.progressSaveAcc=0; saveInProgressGame(); }
@@ -2652,6 +2664,7 @@ function update(dt){
       var tickDmg=e.poisonDps*sdt*((e.shieldTime>0)?0.5:1)*armorMultFor(e,e.poisonTowerKey);
       e.hp-=tickDmg;
       if(e.poisonTowerKey) e.lastHitTowerKey=e.poisonTowerKey;
+      recordDpsDamage(e.poisonTowerKey, tickDmg);
       e.poisonTime-=sdt*1000;
       e.poisonTickAcc=(e.poisonTickAcc||0)+sdt*1000;
       if(e.poisonTickAcc>480){ e.poisonTickAcc=0; spawnDamageFloater(e.x,e.y-e.r-4, Math.max(1,tickDmg*3), 'poison'); }
@@ -3750,7 +3763,8 @@ function upgradeTower(t){
     var uang=Math.random()*Math.PI*2, uspd=20+Math.random()*30;
     G.particles.push({x:t.px,y:t.py,vx:Math.cos(uang)*uspd,vy:Math.sin(uang)*uspd-15,life:350+Math.random()*150,maxLife:500,color:'#FFE066',size:1.8+Math.random()*1.8});
   }
-  sfxUpgrade();
+  // 일괄 업그레이드 중에는 타워 개수만큼 효과음이 겹쳐 소리가 과도하게 커지므로, 배치 중엔 재생을 미루고 배치 종료 후 한 번만 재생
+  if(!UA_BATCHING) sfxUpgrade();
   updateHUD();
 }
 var UA_QTY={};
@@ -3855,6 +3869,7 @@ function renderUpgradeAllPanel(){
       UA_BATCHING=true;
       for(var i=0;i<qty;i++){ upgradeTower(g.towers[i]); }
       UA_BATCHING=false;
+      sfxUpgrade();
       renderUpgradeAllPanel();
     });
   });
@@ -4273,6 +4288,8 @@ function enterGameplay(){
   startMusic();
   startOverlay.style.display='none';
   G.paused=false;
+  applyDpsMeterVisibility();
+  applyDpsMeterCollapsed();
 }
 document.getElementById('tdStartBtn').addEventListener('click', beginOfflinePlay);
 
@@ -4593,6 +4610,49 @@ document.getElementById('tdKillDisplayBtn').addEventListener('click', function()
   G.showKillCounts=!G.showKillCounts;
   this.classList.toggle('tdActive', G.showKillCounts);
 });
+document.getElementById('tdDpsMeterBtn').addEventListener('click', function(){
+  dpsMeterOn=!dpsMeterOn;
+  this.classList.toggle('tdActive', dpsMeterOn);
+  this.querySelector('.tdCtrlLabel').textContent='딜 미터기 '+(dpsMeterOn? 'ON':'OFF');
+  if(!dpsMeterOn){ resetDpsMeterData(); }
+  applyDpsMeterVisibility();
+});
+(function initDpsMeterDrag(){
+  var panel=document.getElementById('tdDpsMeterPanel');
+  var header=document.getElementById('tdDpsMeterHeader');
+  if(!panel || !header) return;
+  var dragging=false, moved=false, startX=0, startY=0, startLeft=0, startTop=0;
+  header.addEventListener('pointerdown', function(ev){
+    dragging=true; moved=false;
+    startX=ev.clientX; startY=ev.clientY;
+    var rect=panel.getBoundingClientRect();
+    var wrapRect=canvasWrap.getBoundingClientRect();
+    startLeft=rect.left-wrapRect.left; startTop=rect.top-wrapRect.top;
+    header.setPointerCapture(ev.pointerId);
+    header.style.cursor='grabbing';
+  });
+  header.addEventListener('pointermove', function(ev){
+    if(!dragging) return;
+    var dx=ev.clientX-startX, dy=ev.clientY-startY;
+    if(Math.abs(dx)>4 || Math.abs(dy)>4) moved=true;
+    if(!moved) return;
+    var wrapRect=canvasWrap.getBoundingClientRect();
+    var maxLeft=Math.max(0, wrapRect.width-panel.offsetWidth);
+    var maxTop=Math.max(0, wrapRect.height-panel.offsetHeight);
+    var newLeft=Math.min(maxLeft, Math.max(0, startLeft+dx));
+    var newTop=Math.min(maxTop, Math.max(0, startTop+dy));
+    panel.style.left=newLeft+'px'; panel.style.top=newTop+'px';
+    panel.style.right='auto';
+  });
+  function endDrag(ev){
+    if(!dragging) return;
+    dragging=false;
+    header.style.cursor='grab';
+    if(!moved){ dpsMeterCollapsed=!dpsMeterCollapsed; applyDpsMeterCollapsed(); }
+  }
+  header.addEventListener('pointerup', endDrag);
+  header.addEventListener('pointercancel', endDrag);
+})();
 document.getElementById('tdPassiveBtn').addEventListener('click', function(){
   if(passiveOverlay.style.display==='flex') closePassive(); else openPassive();
 });
