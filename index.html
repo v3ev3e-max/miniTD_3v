@@ -158,8 +158,20 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       </div>
     </div>
     <div id="tdBattleHud" style="display:none; position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.65); border:1px solid rgba(233,69,96,0.5); border-radius:8px; padding:5px 9px; font-size:10px; color:#fff; text-align:right; z-index:5; pointer-events:none; max-width:170px;">
-      <div id="tdBattleSurvivors" style="font-weight:700; color:#F0B90B; margin-bottom:3px;"></div>
-      <div id="tdBattleOppList"></div>
+      <div id="tdBattleHudToggle" style="display:flex; align-items:center; justify-content:flex-end; gap:3px; cursor:pointer; pointer-events:auto; font-weight:700; color:#F0B90B;">
+        <span id="tdBattleHudToggleIcon">▼</span><span>상대 정보</span>
+      </div>
+      <div id="tdBattleHudBody">
+        <div id="tdBattleSurvivors" style="font-weight:700; color:#F0B90B; margin:3px 0;"></div>
+        <div id="tdBattleOppList"></div>
+      </div>
+    </div>
+    <div id="tdDpsMeterPanel" style="display:none; position:absolute; top:6px; left:6px; width:150px; max-width:58%; background:rgba(0,0,0,0.72); border:1px solid rgba(240,185,11,0.45); border-radius:8px; padding:6px 8px; font-size:10px; color:#fff; z-index:6; touch-action:none; box-shadow:0 6px 16px rgba(0,0,0,0.35);">
+      <div id="tdDpsMeterHeader" style="display:flex; align-items:center; justify-content:space-between; gap:4px; cursor:grab; margin-bottom:4px;">
+        <span style="font-weight:700; color:#F0B90B; white-space:nowrap;">⚔️ 딜 미터기</span>
+        <span id="tdDpsMeterToggleIcon" style="opacity:0.75; padding:1px 4px;">▼</span>
+      </div>
+      <div id="tdDpsMeterBody"><div style="opacity:0.6;">교전 데이터 없음</div></div>
     </div>
     <div id="tdTestPanel" style="display:none; position:absolute; top:6px; left:6px; background:rgba(0,0,0,0.75); border:1px solid rgba(41,182,198,0.5); border-radius:8px; padding:7px 8px; font-size:10px; color:#fff; z-index:5; display:none; flex-direction:column; gap:4px;">
       <div style="font-weight:700; color:#8FD8E8;">🛠 테스트 모드</div>
@@ -282,15 +294,14 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
   <div id="tdLegend" style="display:flex; flex-wrap:wrap; font-size:9.5px; color:var(--text-secondary); line-height:1.6;"></div>
 
   <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); gap:6px;">
+    <!-- 최우선 그룹: 플레이 중 가장 자주 쓰는 기능 -->
     <button id="tdSpeedBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdSpeedIcon"></span><span class="tdCtrlLabel">배속 전환</span></button>
     <button id="tdPauseBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdPauseIcon"></span><span class="tdCtrlLabel">일시정지</span></button>
-    <button id="tdZoomBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdZoomIcon"></span><span class="tdCtrlLabel">확대 1.0x</span></button>
-    <button id="tdFusionBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdFusionIcon"></span><span class="tdCtrlLabel">타워 합성</span></button>
     <button id="tdUpgradeAllBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdUpgradeAllIcon"></span><span class="tdCtrlLabel">일괄 업그레이드</span></button>
+    <button id="tdFusionBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdFusionIcon"></span><span class="tdCtrlLabel">타워 합성</span></button>
     <button id="tdLabBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdLabIcon"></span><span class="tdCtrlLabel">연구소</span></button>
-    <button id="tdMusicBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdMusicIcon"></span><span class="tdCtrlLabel">배경음악 끄기</span></button>
-    <button id="tdSfxBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdSfxIcon"></span><span class="tdCtrlLabel">효과음 끄기</span></button>
-    <button id="tdThemeBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdThemeIcon"></span><span class="tdCtrlLabel">라이트 모드</span></button>
+    <button id="tdAutoPlayBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdAutoPlayIcon"></span><span class="tdCtrlLabel">오토플레이 OFF</span></button>
+    <!-- 두번째 그룹: 정보/보조 표시 -->
     <div id="tdAutoChoiceWrap">
       <svg id="tdAutoBorderSvg" viewBox="0 0 200 56" preserveAspectRatio="none">
         <rect x="2" y="2" width="196" height="52" rx="12" ry="12" fill="none" stroke="rgba(240,185,11,0.28)" stroke-width="2"></rect>
@@ -300,10 +311,16 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
       </svg>
       <button id="tdAutoChoiceBtn" class="tdCtrlBtn" style="position:relative;"><span class="tdCtrlIcon" id="tdAutoChoiceIcon"></span><span class="tdCtrlLabel">웨이브 자동선택 OFF</span></button>
     </div>
+    <button id="tdDpsMeterBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdDpsMeterIcon"></span><span class="tdCtrlLabel">딜 미터기 ON</span></button>
     <button id="tdKillDisplayBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdKillDisplayIcon"></span><span class="tdCtrlLabel">타워 킬수 표시</span></button>
     <button id="tdPassiveBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdPassiveIcon"></span><span class="tdCtrlLabel">보유 패시브</span></button>
+    <!-- 세번째 그룹: 화면/설정 -->
     <button id="tdRankBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdRankIcon"></span><span class="tdCtrlLabel">온라인 랭킹</span></button>
-    <button id="tdAutoPlayBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdAutoPlayIcon"></span><span class="tdCtrlLabel">오토플레이 OFF</span></button>
+    <button id="tdZoomBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdZoomIcon"></span><span class="tdCtrlLabel">확대 1.0x</span></button>
+    <button id="tdMusicBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdMusicIcon"></span><span class="tdCtrlLabel">배경음악 끄기</span></button>
+    <button id="tdSfxBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdSfxIcon"></span><span class="tdCtrlLabel">효과음 끄기</span></button>
+    <button id="tdThemeBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdThemeIcon"></span><span class="tdCtrlLabel">라이트 모드</span></button>
+    <!-- 마지막: 종료 -->
     <button id="tdExitBtn" class="tdCtrlBtn"><span class="tdCtrlIcon" id="tdExitIcon"></span><span class="tdCtrlLabel">타이틀로</span></button>
   </div>
 
@@ -400,7 +417,8 @@ var ICONS={
   trophy:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5H4a3 3 0 0 0 3 5M16 5h4a3 3 0 0 1-3 5"/><path d="M12 13v3M9 20h6M10 17h4v3h-4z"/></svg>',
   zoom:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>',
   exit:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
-  bot:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.3" fill="currentColor" stroke="none"/><path d="M12 8V4M9 4h6"/></svg>'
+  bot:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.3" fill="currentColor" stroke="none"/><path d="M12 8V4M9 4h6"/></svg>',
+  dps:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="12" width="3.5" height="8"/><rect x="10.25" y="7" width="3.5" height="13"/><rect x="16.5" y="3" width="3.5" height="17"/></svg>'
 };
 function initIcons(){
   document.getElementById('tdSpeedIcon').innerHTML=ICONS.speed;
@@ -418,6 +436,7 @@ function initIcons(){
   document.getElementById('tdZoomIcon').innerHTML=ICONS.zoom;
   document.getElementById('tdExitIcon').innerHTML=ICONS.exit;
   document.getElementById('tdAutoPlayIcon').innerHTML=ICONS.bot;
+  document.getElementById('tdDpsMeterIcon').innerHTML=ICONS.dps;
   document.getElementById('tdTitleIcon').innerHTML='<svg viewBox="0 0 64 64" width="52" height="52"><defs><linearGradient id="tdTitleGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F0B90B"/><stop offset="100%" stop-color="#E24B4A"/></linearGradient></defs><polygon points="32,4 40,20 24,20" fill="url(#tdTitleGrad)"/><rect x="27" y="18" width="10" height="16" rx="2" fill="url(#tdTitleGrad)"/><circle cx="32" cy="42" r="18" fill="none" stroke="url(#tdTitleGrad)" stroke-width="3.5"/><circle cx="32" cy="42" r="6" fill="url(#tdTitleGrad)"/></svg>';
 }
 
@@ -798,6 +817,62 @@ var TOWER_DEFS={
   nova:{name:'초신성', cost:150000, dmg:700, range:150, rate:1100, splash:105, unlockWave:50, color:'#FF3864', dark:'#7A0F27'}
 };
 
+// ===== 실시간 딜 미터기 =====
+var dpsMeterOn=true; // 기본 ON (사용자 설정, 게임 재시작해도 유지됨)
+var dpsMeterCollapsed=false;
+var dpsWindowDmg={}; // 이번 0.5초 구간 동안 타워 종류별 누적 데미지
+var dpsWindowAcc=0;
+var dpsDisplayList=[]; // [{kind,name,color,dps}], 높은 순 정렬
+function recordDpsDamage(towerKey, amt){
+  if(!dpsMeterOn || !towerKey || !(amt>0)) return;
+  var t=G.towers && G.towers[towerKey];
+  if(!t) return;
+  dpsWindowDmg[t.kind]=(dpsWindowDmg[t.kind]||0)+amt;
+}
+function resetDpsMeterData(){
+  dpsWindowDmg={}; dpsWindowAcc=0; dpsDisplayList=[];
+  renderDpsMeter();
+}
+function tickDpsMeter(dt){
+  if(!dpsMeterOn) return;
+  dpsWindowAcc+=dt;
+  if(dpsWindowAcc<0.5) return;
+  var elapsed=dpsWindowAcc;
+  dpsDisplayList=Object.keys(dpsWindowDmg).map(function(kind){
+    var def=TOWER_DEFS[kind];
+    return {kind:kind, name:(def? def.name:kind)+'타워', color:def? def.color:'#888', dps:dpsWindowDmg[kind]/elapsed};
+  }).sort(function(a,b){ return b.dps-a.dps; });
+  dpsWindowDmg={}; dpsWindowAcc=0;
+  renderDpsMeter();
+}
+function renderDpsMeter(){
+  var body=document.getElementById('tdDpsMeterBody');
+  if(!body) return;
+  if(!dpsDisplayList.length){ body.innerHTML='<div style="opacity:0.6;">교전 데이터 없음</div>'; return; }
+  var total=dpsDisplayList.reduce(function(s,d){ return s+d.dps; },0);
+  if(total<=0){ body.innerHTML='<div style="opacity:0.6;">교전 데이터 없음</div>'; return; }
+  body.innerHTML=dpsDisplayList.map(function(d){
+    var pct=Math.max(0,Math.round(d.dps/total*100));
+    return '<div style="margin-bottom:4px;">'
+      +'<div style="display:flex; justify-content:space-between; gap:6px; font-size:9.5px; margin-bottom:2px; white-space:nowrap;"><span>'+escapeHtml(d.name)+'</span><span>'+pct+'%</span></div>'
+      +'<div style="height:6px; border-radius:3px; background:rgba(255,255,255,0.1); overflow:hidden;"><div style="height:100%; width:'+pct+'%; background:'+d.color+'; border-radius:3px;"></div></div>'
+    +'</div>';
+  }).join('');
+}
+function applyDpsMeterVisibility(){
+  var panel=document.getElementById('tdDpsMeterPanel');
+  if(!panel) return;
+  panel.style.display = dpsMeterOn? 'flex' : 'none';
+  panel.style.flexDirection='column';
+}
+function applyDpsMeterCollapsed(){
+  var body=document.getElementById('tdDpsMeterBody');
+  var icon=document.getElementById('tdDpsMeterToggleIcon');
+  if(!body || !icon) return;
+  body.style.display = dpsMeterCollapsed? 'none' : 'block';
+  icon.textContent = dpsMeterCollapsed? '▲' : '▼';
+}
+
 function easeOutBack(x){
   var c1=1.70158, c3=c1+1;
   return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);
@@ -968,7 +1043,9 @@ var RESEARCH_DEFS={
 var research={startGold:0,dmg:0,crit:0,goldGain:0,waveReward:0};
 var researchPoints=0;
 var userXP=0;
-var cpuRating=300;
+// 신규 유저 기본 CPU 레이팅 (실버 티어 구간 300 LP에서 시작, 브론즈부터 시작하지 않도록 함)
+var CPU_RATING_DEFAULT=300;
+var cpuRating=CPU_RATING_DEFAULT;
 var selectedSkipWave=1;
 function xpStorageKey(){
   return currentUser? ('mtdd_userXP_'+currentUser.uid) : 'mtdd_userXP_guest';
@@ -982,10 +1059,21 @@ function saveLocalXP(){
 function levelFromXP(xp){ return Math.floor(xp/100)+1; }
 function xpIntoLevel(xp){ return xp%100; }
 function maxSkipWaveForLevel(level){ return Math.min(30, (level-1)*5); }
+// 웨이브별 기본 클리어 보상 (실제 인게임 웨이브 보상 계산식과 동일, 2520번째 줄 참고)
+function waveClearBaseReward(wave){ return 20*Math.pow(1.14, wave-1); }
+// 스킵한 웨이브 구간이 높을수록 보상 비율을 올려 스킵의 전략적 가치를 높임
+function skipBonusRatioForWave(wave){
+  if(wave<=30) return 0.4;
+  if(wave<=60) return 0.6;
+  return 0.8;
+}
 function estimateSkipGold(skipWave){
   if(skipWave<=1) return 0;
-  var n=skipWave-1;
-  return Math.round(20*(Math.pow(1.14,n)-1)/0.14);
+  var total=0;
+  for(var w=1; w<skipWave; w++){
+    total += waveClearBaseReward(w)*skipBonusRatioForWave(w);
+  }
+  return Math.round(total);
 }
 loadLocalXP();
 var currentUser=null;
@@ -1280,6 +1368,15 @@ function setBattleControlsUI(inBattle){
   var pb=document.getElementById('tdPauseBtn'), sb=document.getElementById('tdSpeedBtn');
   if(pb) pb.style.display = inBattle? 'none' : '';
   if(sb) sb.style.display = inBattle? 'none' : '';
+  // CPU 랭크전/온라인 대전에서는 웨이브 자동선택(보상 자동 픽)을 사용할 수 없음
+  var acWrap=document.getElementById('tdAutoChoiceWrap');
+  if(acWrap) acWrap.style.display = inBattle? 'none' : '';
+  if(inBattle){
+    G.autoChoice=false;
+    var acBtn=document.getElementById('tdAutoChoiceBtn');
+    if(acBtn){ acBtn.classList.remove('tdActive'); acBtn.querySelector('.tdCtrlLabel').textContent='웨이브 자동선택 OFF'; }
+    if(acWrap) acWrap.classList.remove('tdSpinBorder');
+  }
 }
 function beginBattleGame(code){
   document.getElementById('tdBattlePanel').style.display='none';
@@ -1293,6 +1390,7 @@ function beginBattleGame(code){
   document.getElementById('tdBattleHud').style.display='block';
   battleLastProgressSnap={};
   renderOppHud();
+  applyBattleHudCollapsed();
   enterGameplay();
   listenOpponentProgress(code);
   setupPresence(code);
@@ -1319,6 +1417,17 @@ function updateBattleRanking(allProgress){
     row.style.opacity = e.alive? '1':'0.45';
   });
 }
+function applyBattleHudCollapsed(){
+  var body=document.getElementById('tdBattleHudBody');
+  var icon=document.getElementById('tdBattleHudToggleIcon');
+  if(!body || !icon) return;
+  body.style.display = G.battleHudCollapsed? 'none' : 'block';
+  icon.textContent = G.battleHudCollapsed? '▲' : '▼';
+}
+document.getElementById('tdBattleHudToggle').addEventListener('click', function(){
+  G.battleHudCollapsed=!G.battleHudCollapsed;
+  applyBattleHudCollapsed();
+});
 function renderOppHud(){
   var wrap=document.getElementById('tdBattleOppList');
   if(!wrap) return;
@@ -1536,6 +1645,7 @@ function leaveBattlePanel(){
   document.getElementById('tdBattlePanel').style.display='none';
   document.getElementById('tdBattleHud').style.display='none';
   setBattleControlsUI(false);
+  setSkipRowDisabled(false);
   loggedInMenuEl.style.display='flex';
 }
 
@@ -1545,8 +1655,11 @@ var RANK_TIERS=[
   {key:'bronze', name:'브론즈', min:0, color:'#CD7F32', icon:'🥉'},
   {key:'silver', name:'실버', min:200, color:'#B9C2CB', icon:'🥈'},
   {key:'gold', name:'골드', min:400, color:'#F0B90B', icon:'🥇'},
-  {key:'diamond', name:'다이아', min:600, color:'#5AC8FA', icon:'💠'},
-  {key:'challenger', name:'챌린저', min:800, color:'#FF3864', icon:'🏆'}
+  {key:'platinum', name:'플래티넘', min:600, color:'#3AD1C4', icon:'💎'},
+  {key:'diamond', name:'다이아', min:800, color:'#5AC8FA', icon:'💠'},
+  {key:'master', name:'마스터', min:1000, color:'#B266FF', icon:'🔮'},
+  {key:'grandmaster', name:'그랜드마스터', min:1200, color:'#FF7A3D', icon:'👑'},
+  {key:'challenger', name:'챌린저', min:1400, color:'#FF3864', icon:'🏆'}
 ];
 function getRankInfo(rating){
   var tier=RANK_TIERS[0];
@@ -1559,12 +1672,12 @@ function rankLabelHtml(rating){
 }
 // 레이팅이 높을수록 CPU의 경제 효율/속도가 매끄럽게 강해지고, 실수 빈도는 줄어듦 (다이아부터 합성 사용)
 function cpuParamsForRating(rating){
-  var t=Math.max(0, Math.min(1, rating/1000));
+  var t=Math.max(0, Math.min(1, rating/1400));
   return {
     econEff: 0.42+0.68*t,
     mistakeChance: Math.max(0, 0.42*(1-t)),
     speedMult: 0.52+0.86*t,
-    fusion: rating>=600
+    fusion: rating>=800
   };
 }
 function renderCpuRankBadge(){
@@ -1589,6 +1702,7 @@ function beginCpuBattle(){
   battleLastProgressSnap={}; battleLastProgressSnap[cpuUid]={wave:0, lives:20, alive:true};
   document.getElementById('tdBattleHud').style.display='block';
   renderOppHud();
+  applyBattleHudCollapsed();
   enterGameplay();
 }
 function cpuAiSpend(cpu){
@@ -1670,11 +1784,11 @@ async function loadOrInitSave(user, nickHint){
       researchPoints = typeof data.researchPoints==='number'? data.researchPoints : 0;
       sessionBest = typeof data.sessionBest==='number'? data.sessionBest : 0;
       userXP = typeof data.userXP==='number'? data.userXP : 0;
-      cpuRating = typeof data.cpuRating==='number'? data.cpuRating : 300;
+      cpuRating = typeof data.cpuRating==='number'? data.cpuRating : CPU_RATING_DEFAULT;
       saveLocalXP();
       refreshLevelUI();
     } else {
-      researchPoints=0; sessionBest=0; userXP=0; cpuRating=300;
+      researchPoints=0; sessionBest=0; userXP=0; cpuRating=CPU_RATING_DEFAULT;
       Object.keys(research).forEach(function(k){ research[k]=0; });
       await firebase.database().ref('users/'+user.uid+'/save').set({research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, cpuRating:cpuRating, updatedAt:Date.now()});
       saveLocalXP();
@@ -2132,7 +2246,7 @@ function resetGame(forBattle){
   G.selectedTower=null; G.placeType=null; G.hoverCell=null;
   G.fusionMode=false; G.fusionSelection=[];
   G.speedMult=1; G.paused=true; G.manualPause=false; G.gameOver=false; G.choosing=false;
-  G.autoChoice=false; G.showKillCounts=false;
+  G.autoChoice=false; G.showKillCounts=false; G.battleHudCollapsed=false;
   G.autoPlayMode=false; G.autoPlayAcc=0; G.autoPlayNextAt=1.8;
   var apBtn=document.getElementById('tdAutoPlayBtn');
   if(apBtn){ apBtn.classList.remove('tdActive'); apBtn.querySelector('.tdCtrlLabel').textContent='오토플레이 OFF'; }
@@ -4179,6 +4293,7 @@ document.getElementById('tdTestGoldBtn').addEventListener('click', testSetGold);
 document.getElementById('tdTestExitBtn').addEventListener('click', exitTestMode);
 document.getElementById('tdBattleOpenBtn').addEventListener('click', function(){
   loggedInMenuEl.style.display='none';
+  setSkipRowDisabled(true);
   document.getElementById('tdBattlePanel').style.display='flex';
   document.getElementById('tdBattleMenu').style.display='flex';
   document.getElementById('tdBattleWaiting').style.display='none';
@@ -4199,12 +4314,14 @@ document.querySelectorAll('.tdBattleSizeBtn').forEach(function(btn){
 });
 document.getElementById('tdCpuOpenBtn').addEventListener('click', function(){
   loggedInMenuEl.style.display='none';
+  setSkipRowDisabled(true);
   document.getElementById('tdCpuPanel').style.display='flex';
   renderCpuRankBadge();
 });
 document.getElementById('tdCpuMatchBtn').addEventListener('click', beginCpuBattle);
 document.getElementById('tdCpuCancelBtn').addEventListener('click', function(){
   document.getElementById('tdCpuPanel').style.display='none';
+  setSkipRowDisabled(false);
   loggedInMenuEl.style.display='flex';
 });
 document.getElementById('tdBattleCreateBtn').addEventListener('click', createBattleRoom);
@@ -4216,7 +4333,7 @@ document.getElementById('tdBattleStartBtn').addEventListener('click', startBattl
 document.getElementById('tdLogoutBtn').addEventListener('click', function(){
   if(fbReady()){ firebase.auth().signOut(); }
   currentUser=null; currentNickname=null; pendingResume=null;
-  researchPoints=0; sessionBest=0; cpuRating=300;
+  researchPoints=0; sessionBest=0; cpuRating=CPU_RATING_DEFAULT;
   Object.keys(research).forEach(function(k){ research[k]=0; });
   loadLocalXP(); // 게스트 전용 로컬 캐시로 전환 (mtdd_userXP_guest)
   refreshLevelUI();
@@ -4359,7 +4476,9 @@ document.getElementById('tdFusionBtn').addEventListener('click', function(){
 document.getElementById('tdFusionCloseBtn').addEventListener('click', closeFusion);
 document.getElementById('tdUpgradeAllBtn').addEventListener('click', function(){
   if(pauseBlocked()) return;
-  openUpgradeAllPanel();
+  var uaOverlayEl=document.getElementById('tdUpgradeAllOverlay');
+  if(uaOverlayEl.style.display==='flex'){ closeUpgradeAllPanel(); }
+  else { openUpgradeAllPanel(); }
 });
 document.getElementById('tdUpgradeAllCloseBtn').addEventListener('click', closeUpgradeAllPanel);
 document.getElementById('tdLabBtn').addEventListener('click', function(){
@@ -4490,6 +4609,13 @@ rankNameInput.addEventListener('keydown', function(ev){
   if(ev.key==='Enter') document.getElementById('tdRankSubmitBtn').click();
 });
 
+// CPU 랭크전/온라인 대전에서는 시작 웨이브 스킵을 사용할 수 없으므로 선택창을 비활성화
+function setSkipRowDisabled(disabled){
+  var skipRow=document.getElementById('tdSkipRow');
+  var sel=document.getElementById('tdSkipSelect');
+  if(sel) sel.disabled=disabled;
+  if(skipRow) skipRow.style.opacity = disabled? '0.4' : '1';
+}
 function refreshLevelUI(){
   var level=levelFromXP(userXP);
   var into=xpIntoLevel(userXP);
@@ -4497,6 +4623,7 @@ function refreshLevelUI(){
   var maxSkip=maxSkipWaveForLevel(level);
   var skipRow=document.getElementById('tdSkipRow');
   var sel=document.getElementById('tdSkipSelect');
+  setSkipRowDisabled(false);
   if(maxSkip>=5){
     skipRow.style.display='flex';
     var opts=[1];
