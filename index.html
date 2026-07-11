@@ -1948,8 +1948,29 @@ function handleBattleRoomFinished(room){
   if(iWon){ spawnVictoryEffect(); sfxVictory(); }
   document.getElementById('tdBattleHud').style.display='none';
   cleanupBattleListeners();
+  // [온라인 방 자동 삭제] 배틀이 끝난 방(progress/presence 등 하위 데이터 포함)을 그대로 두면
+  // Firebase에 무한히 쌓이므로, 결과 화면을 다 받은 뒤 방 전체를 삭제함.
+  // 방장이 먼저(5초 뒤) 삭제를 시도하고, 방장이 그 사이 앱을 꺼버린 경우를 대비해
+  // 다른 참가자도 더 늦게(15초 뒤) 한 번 더 시도함 - 이미 지워진 방을 다시 지워도 에러 없이 무시됨.
+  if(battleRoomCode && fbReady()){
+    var codeToDelete=battleRoomCode;
+    var deleteDelay=battleIsHost? 5000 : 15000;
+    setTimeout(function(){
+      firebase.database().ref('battleRooms/'+codeToDelete).remove().catch(function(e){});
+    }, deleteDelay);
+  }
 }
 function leaveBattlePanel(){
+  // [온라인 방 자동 삭제] 배틀 시작 전(대기방 단계)에 취소하고 나가는 경우도 방이 그대로 남아
+  // 쌓이지 않도록 정리함 - 방장이면 방 전체를 삭제, 참가자면 내 항목만 제거(방장은 계속 대기 가능).
+  if(battleRoomCode && fbReady()){
+    var codeToLeave=battleRoomCode, uidToLeave=myBattleUid();
+    if(battleIsHost){
+      firebase.database().ref('battleRooms/'+codeToLeave).remove().catch(function(e){});
+    } else if(uidToLeave){
+      firebase.database().ref('battleRooms/'+codeToLeave+'/players/'+uidToLeave).remove().catch(function(e){});
+    }
+  }
   cleanupBattleListeners();
   battleRoomCode=null; battlePlayers={}; battleIsHost=false;
   document.getElementById('tdBattlePanel').style.display='none';
