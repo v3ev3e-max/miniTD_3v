@@ -113,6 +113,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
         <button id="tdContinueBtn" style="padding:8px; font-size:12.5px; font-weight:700; border-radius:9px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200; box-shadow:0 4px 14px rgba(240,185,11,0.35);">새로 시작</button>
         <button id="tdBattleOpenBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(233,69,96,0.5); background:rgba(233,69,96,0.12); color:#FF8FA3;">⚔️ 온라인 대전</button>
         <button id="tdCpuOpenBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(90,200,250,0.5); background:rgba(90,200,250,0.12); color:#8FD8E8;">🤖 CPU 대전</button>
+        <button id="tdGachaOpenBtn" style="padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(240,185,11,0.5); background:rgba(240,185,11,0.12); color:#F0D08F;">🎰 스킨 가챠</button>
         <button id="tdTestModeBtn" style="display:none; padding:7px; font-size:11.5px; font-weight:600; border-radius:9px; border:1px solid rgba(41,182,198,0.5); background:rgba(41,182,198,0.12); color:#8FD8E8;">🛠 테스트 모드</button>
         <button id="tdLogoutBtn" style="padding:7px; font-size:11px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); color:#fff;">로그아웃</button>
       </div>
@@ -231,6 +232,16 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
         </div>
       </div>
       <button id="tdPatchNotesCloseBtn" style="margin-top:6px; padding:8px 16px;">닫기</button>
+    </div>
+    <div id="tdGachaOverlay" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; background:rgba(0,0,0,0.92); border-radius:var(--radius); color:#fff; padding:12px 10px; text-align:center; overflow-y:auto;">
+      <div style="font-size:14px; font-weight:700;">🎰 스킨 가챠</div>
+      <div style="font-size:9.5px; opacity:0.7; max-width:320px; line-height:1.5;">순수 코스메틱(색상 테마) 전용입니다. 공격력·사거리 등 스탯에는 전혀 영향을 주지 않습니다. 웨이브를 클리어할수록 조각을 얻습니다.</div>
+      <div style="font-size:11px; opacity:0.85; margin-top:2px;">보유 조각: <span id="tdGachaShards" style="color:#F0B90B; font-weight:700;">0</span>개 · 1회 뽑기 = <span style="color:#F0B90B;">5조각</span></div>
+      <button id="tdGachaPullBtn" style="padding:10px 20px; font-size:12.5px; font-weight:700; border-radius:10px; border:none; background:linear-gradient(135deg,#F0B90B,#E0672B); color:#1a1200; box-shadow:0 4px 14px rgba(240,185,11,0.35);">✨ 뽑기 (5조각)</button>
+      <div id="tdGachaResult" style="min-height:20px; font-size:12px; font-weight:700;"></div>
+      <div style="font-size:11px; font-weight:700; margin-top:6px; align-self:flex-start; padding-left:2px;">보유 스킨 (탭해서 장착)</div>
+      <div id="tdGachaCollection" style="display:grid; grid-template-columns:repeat(3,1fr); gap:7px; width:100%; max-width:340px;"></div>
+      <button id="tdGachaCloseBtn" style="margin-top:8px; padding:8px 16px;">닫기</button>
     </div>
     <div id="tdOverlay" style="position:absolute; inset:0; display:none; align-items:center; justify-content:flex-start; flex-direction:column; gap:8px; background:rgba(0,0,0,0.6); border-radius:var(--radius); color:#fff; text-align:center; padding:16px 10px; overflow-y:auto;">
       <div style="font-size:16px; font-weight:500; margin-top:6px;" id="tdOverlayTitle">게임 오버</div>
@@ -969,6 +980,77 @@ function lightenColor(hex, amt){
   r=Math.round(r+(255-r)*amt); g=Math.round(g+(255-g)*amt); b=Math.round(b+(255-b)*amt);
   return 'rgb('+r+','+g+','+b+')';
 }
+// ===== 스킨 가챠 시스템 (순수 코스메틱 - 스탯에는 전혀 영향 없음) =====
+function hexToHsl(hex){
+  hex=(hex||'#888888').replace('#','');
+  if(hex.length===3) hex=hex.split('').map(function(c){ return c+c; }).join('');
+  var r=parseInt(hex.substr(0,2),16)/255, g=parseInt(hex.substr(2,2),16)/255, b=parseInt(hex.substr(4,2),16)/255;
+  var max=Math.max(r,g,b), min=Math.min(r,g,b);
+  var h,s,l=(max+min)/2;
+  if(max===min){ h=0; s=0; }
+  else{
+    var d=max-min;
+    s=l>0.5? d/(2-max-min) : d/(max+min);
+    if(max===r) h=(g-b)/d+(g<b?6:0);
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h/=6;
+  }
+  return {h:h*360, s:s*100, l:l*100};
+}
+function hslToHex(h,s,l){
+  h=((h%360)+360)%360; s=Math.max(0,Math.min(100,s))/100; l=Math.max(0,Math.min(100,l))/100;
+  var c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2, r,g,b;
+  if(h<60){r=c;g=x;b=0;} else if(h<120){r=x;g=c;b=0;} else if(h<180){r=0;g=c;b=x;}
+  else if(h<240){r=0;g=x;b=c;} else if(h<300){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+  function to255(v){ return Math.round((v+m)*255); }
+  function hex2(v){ var s2=to255(v).toString(16); return s2.length<2? '0'+s2 : s2; }
+  return '#'+hex2(r)+hex2(g)+hex2(b);
+}
+function themedColor(hex, theme){
+  if(!theme || theme.hueShift==null) return hex;
+  var hsl=hexToHsl(hex);
+  var h=hsl.h+theme.hueShift;
+  var s=Math.max(8,Math.min(100, hsl.s*(theme.satMult||1)));
+  var l=Math.max(6,Math.min(92, hsl.l*(theme.lightMult||1)));
+  return hslToHex(h,s,l);
+}
+var SKIN_THEMES=[
+  {id:'default', name:'기본', rarity:'basic', hueShift:0, satMult:1, lightMult:1},
+  {id:'ocean', name:'오션 블루', rarity:'common', hueShift:200, satMult:1.1, lightMult:1.0},
+  {id:'forest', name:'포레스트 그린', rarity:'common', hueShift:120, satMult:1.05, lightMult:0.98},
+  {id:'sunset', name:'선셋 오렌지', rarity:'common', hueShift:25, satMult:1.15, lightMult:1.02},
+  {id:'royal', name:'로얄 퍼플', rarity:'rare', hueShift:270, satMult:1.2, lightMult:0.95},
+  {id:'sakura', name:'사쿠라 핑크', rarity:'rare', hueShift:330, satMult:1.1, lightMult:1.08},
+  {id:'cyber', name:'사이버 네온', rarity:'epic', hueShift:180, satMult:1.5, lightMult:1.1},
+  {id:'obsidian', name:'옵시디언 다크', rarity:'epic', hueShift:0, satMult:0.4, lightMult:0.55},
+  {id:'gold', name:'골드 프레스티지', rarity:'legendary', hueShift:45, satMult:1.3, lightMult:1.15},
+  {id:'rainbow', name:'홀로그램 레인보우', rarity:'legendary', animated:true}
+];
+var RARITY_INFO={
+  basic:{name:'기본', color:'#9aa7b8'},
+  common:{name:'일반', color:'#9aa7b8'},
+  rare:{name:'레어', color:'#5AC8FA'},
+  epic:{name:'에픽', color:'#B388FF'},
+  legendary:{name:'전설', color:'#F0B90B'}
+};
+function skinById(id){ for(var i=0;i<SKIN_THEMES.length;i++){ if(SKIN_THEMES[i].id===id) return SKIN_THEMES[i]; } return SKIN_THEMES[0]; }
+var gachaShards=0;
+var ownedSkins=['default'];
+var equippedSkin='default';
+var GACHA_POOL=SKIN_THEMES.filter(function(s){ return s.id!=='default'; });
+var GACHA_RARITY_WEIGHTS={common:55, rare:30, epic:12, legendary:3};
+var GACHA_PULL_COST=5;
+function rollGachaOnce(){
+  var totalW=0;
+  GACHA_POOL.forEach(function(s){ totalW+=GACHA_RARITY_WEIGHTS[s.rarity]||1; });
+  var r=Math.random()*totalW, acc=0, picked=GACHA_POOL[0];
+  for(var i=0;i<GACHA_POOL.length;i++){
+    acc+=GACHA_RARITY_WEIGHTS[GACHA_POOL[i].rarity]||1;
+    if(r<=acc){ picked=GACHA_POOL[i]; break; }
+  }
+  return picked;
+}
 // 타워 종류별 포신 개수/형태/팁 모양을 다르게 주어 실루엣을 구분 (사실감 강화)
 var TOWER_VISUALS={
   basic:{barrels:1, barrelWMult:1, barrelLenMult:1, tip:'circle'},
@@ -989,6 +1071,11 @@ var TOWER_VISUALS={
   commander:{barrels:0, ring:true}
 };
 function drawTowerBody(t, R, bw, barrelLen, barrelW){
+  if(t.skinTheme==='rainbow'){
+    var shiftDeg=(Date.now()/16)%360;
+    t.color=hslToHex((hexToHsl(t.skinBaseColor||t.color).h+shiftDeg), 78, 58);
+    t.dark=hslToHex((hexToHsl(t.skinBaseDark||t.dark).h+shiftDeg), 70, 28);
+  }
   var vis=TOWER_VISUALS[t.kind]||{barrels:1, barrelWMult:1, barrelLenMult:1, tip:'circle'};
   ctx.save();
   ctx.translate(t.px,t.py);
@@ -1253,6 +1340,8 @@ function triggerGameOver(forced){
   if(!G.testMode){
     earned=Math.floor(G.wave*0.6+G.totalKills*0.02);
     researchPoints+=earned;
+    var shardsEarned=Math.max(1, Math.floor(G.wave/8));
+    gachaShards+=shardsEarned;
     var prevLevel=levelFromXP(userXP);
     userXP+=earned;
     saveLocalXP();
@@ -1264,7 +1353,7 @@ function triggerGameOver(forced){
   overlayTitle.textContent = G.testMode? '테스트 종료' : '게임 오버';
   overlaySub.innerHTML = G.testMode
     ? ('도달한 웨이브: '+G.wave+'<br><span style="opacity:0.7;">테스트 모드 - 기록은 저장되지 않습니다</span>')
-    : ('도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+levelUpHtml);
+    : ('도달한 웨이브: '+G.wave+'<br>총 처치 '+fmt(G.totalKills)+' - 이번 세션 최고 웨이브 '+sessionBest+'<br>연구 포인트 +'+fmt(earned)+' 획득 · 유저 경험치 +'+fmt(earned)+' · 🎰 조각 +'+shardsEarned+levelUpHtml);
   G.finalWave=G.wave; G.finalKills=G.totalKills;
   if(G.battleMode && battleRoomCode){
     pushBattleProgress();
@@ -1887,7 +1976,8 @@ function scheduleSync(){
   clearTimeout(syncTimer);
   syncTimer=setTimeout(function(){
     firebase.database().ref('users/'+currentUser.uid+'/save').set({
-      research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, cpuRating:cpuRating, updatedAt:Date.now()
+      research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, cpuRating:cpuRating,
+      gachaShards:gachaShards, ownedSkins:ownedSkins, equippedSkin:equippedSkin, updatedAt:Date.now()
     }).catch(function(e){ console.error('sync failed', e); });
   }, 1200);
 }
@@ -1903,12 +1993,16 @@ async function loadOrInitSave(user, nickHint){
       sessionBest = typeof data.sessionBest==='number'? data.sessionBest : 0;
       userXP = typeof data.userXP==='number'? data.userXP : 0;
       cpuRating = typeof data.cpuRating==='number'? data.cpuRating : CPU_RATING_DEFAULT;
+      gachaShards = typeof data.gachaShards==='number'? data.gachaShards : 0;
+      ownedSkins = Array.isArray(data.ownedSkins) && data.ownedSkins.length? data.ownedSkins : ['default'];
+      equippedSkin = (typeof data.equippedSkin==='string' && ownedSkins.indexOf(data.equippedSkin)>=0)? data.equippedSkin : 'default';
       saveLocalXP();
       refreshLevelUI();
     } else {
       researchPoints=0; sessionBest=0; userXP=0; cpuRating=CPU_RATING_DEFAULT;
+      gachaShards=0; ownedSkins=['default']; equippedSkin='default';
       Object.keys(research).forEach(function(k){ research[k]=0; });
-      await firebase.database().ref('users/'+user.uid+'/save').set({research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, cpuRating:cpuRating, updatedAt:Date.now()});
+      await firebase.database().ref('users/'+user.uid+'/save').set({research:research, researchPoints:researchPoints, sessionBest:sessionBest, userXP:userXP, cpuRating:cpuRating, gachaShards:gachaShards, ownedSkins:ownedSkins, equippedSkin:equippedSkin, updatedAt:Date.now()});
       saveLocalXP();
       refreshLevelUI();
     }
@@ -2380,7 +2474,7 @@ function resetGame(forBattle){
   G.shakeTime=0; G.shakeMag=0; G.waveBanner=null; G.timeAcc=0;
   G.critChance=0.08+rsrch.crit*0.01; G.critMult=1.8; G.totalKills=0;
   G.buffAtkSpeed=1; G.buffGold=1; G.buffRange=1; G.buffDiscount=1; G.buffDmg=1; G.specials=[];
-  overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none'; document.getElementById('tdFusionOverlay').style.display='none'; document.getElementById('tdUpgradeAllOverlay').style.display='none';
+  overlay.style.display='none'; choiceOverlay.style.display='none'; labOverlay.style.display='none'; passiveOverlay.style.display='none'; rankOverlay.style.display='none'; document.getElementById('tdFusionOverlay').style.display='none'; document.getElementById('tdUpgradeAllOverlay').style.display='none'; document.getElementById('tdGachaOverlay').style.display='none';
   if(typeof _choiceTimerIv!=='undefined' && _choiceTimerIv){ clearInterval(_choiceTimerIv); _choiceTimerIv=null; }
   rankSubmitted=false; rankSubmitMsg.textContent=''; rankSubmitBtn.disabled=false; rankSubmitBtn.textContent='랭킹 등록'; rankSubmitBtn.style.display=''; rankNameInput.disabled=false; rankNameInput.value='';
   towerPopup.style.display='none'; towerPopup.style.opacity='0';
@@ -3889,11 +3983,14 @@ function placeTower(gx,gy,forceKind){
   var cost=Math.round(def.cost*G.buffDiscount);
   if(G.money<cost) return;
   G.money-=cost;
+  var skinTheme=skinById(equippedSkin);
   var newTower={
     key:key, gx:gx, gy:gy, px:gx*TILE+TILE/2, py:gy*TILE+TILE/2, angle:0,
     kind:kind, name:def.name, baseCost:cost, spent:cost, level:1, fusionGrade:0, kills:0,
     dmg:def.dmg, range:def.range, rate:def.rate, cooldown:0, stunTime:0,
-    color:def.color, dark:def.dark, airOnly:def.airOnly||false, canBoth:def.canBoth||false, armorPierce:def.armorPierce||false,
+    color:themedColor(def.color, skinTheme), dark:themedColor(def.dark, skinTheme),
+    skinTheme:equippedSkin, skinBaseColor:def.color, skinBaseDark:def.dark,
+    airOnly:def.airOnly||false, canBoth:def.canBoth||false, armorPierce:def.armorPierce||false,
     splash:def.splash||0, slow:def.slow||0, slowDur:def.slowDur||0,
     chain:def.chain||0, chainRange:def.chainRange||0, falloff:def.falloff||1,
     poisonDps:def.poisonDps||0, poisonDur:def.poisonDur||3000,
@@ -3905,7 +4002,7 @@ function placeTower(gx,gy,forceKind){
   };
   G.towers[key]=newTower;
   G.lastPlacement={key:key, ts:Date.now()};
-  spawnBuildEffect(newTower.px, newTower.py, def.color);
+  spawnBuildEffect(newTower.px, newTower.py, newTower.color);
   sfxPlace();
   if(Math.random()<0.005){
     applyLuckyLevel5(newTower);
@@ -4258,6 +4355,65 @@ document.getElementById('tdPatchNotesBtn').addEventListener('click', function(){
 document.getElementById('tdPatchNotesCloseBtn').addEventListener('click', function(){
   document.getElementById('tdPatchNotesOverlay').style.display='none';
 });
+function renderGachaPanel(){
+  document.getElementById('tdGachaShards').textContent=fmt(gachaShards);
+  var pullBtn=document.getElementById('tdGachaPullBtn');
+  pullBtn.disabled = gachaShards<GACHA_PULL_COST;
+  pullBtn.style.opacity = gachaShards<GACHA_PULL_COST? '0.45' : '1';
+  var previewBase='#378ADD'; // 기본 타워 색상을 견본으로 사용해 테마 차이를 보여줌
+  var col=document.getElementById('tdGachaCollection');
+  col.innerHTML=SKIN_THEMES.map(function(s){
+    var owned=ownedSkins.indexOf(s.id)>=0;
+    var equipped=equippedSkin===s.id;
+    var rarity=RARITY_INFO[s.rarity];
+    var swatch = s.animated
+      ? 'linear-gradient(135deg,#ff004c,#ff8a00,#ffe600,#00ff85,#00c3ff,#7a00ff)'
+      : themedColor(previewBase, s);
+    return '<div class="tdGachaSkinCell" data-id="'+s.id+'" style="cursor:'+(owned?'pointer':'default')+'; border-radius:10px; padding:7px 5px; text-align:center; background:rgba(255,255,255,0.06); border:2px solid '+(equipped? '#F0B90B' : 'rgba(255,255,255,0.12)')+'; opacity:'+(owned?1:0.45)+';">'
+      +'<div style="width:36px; height:36px; border-radius:50%; margin:0 auto 4px; background:'+swatch+'; border:1px solid rgba(255,255,255,0.3);"></div>'
+      +'<div style="font-size:9.5px; font-weight:700;">'+s.name+'</div>'
+      +'<div style="font-size:8px; color:'+rarity.color+'; font-weight:700;">'+rarity.name+'</div>'
+      +(equipped? '<div style="font-size:8px; color:#F0B90B; margin-top:2px;">장착됨</div>' : (owned? '<div style="font-size:8px; opacity:0.7; margin-top:2px;">보유중</div>' : '<div style="font-size:8px; opacity:0.55; margin-top:2px;">미보유</div>'))
+    +'</div>';
+  }).join('');
+  col.querySelectorAll('.tdGachaSkinCell').forEach(function(cell){
+    cell.addEventListener('click', function(){
+      var id=cell.dataset.id;
+      if(ownedSkins.indexOf(id)<0) return;
+      equippedSkin=id;
+      scheduleSync();
+      renderGachaPanel();
+    });
+  });
+}
+function pullGacha(){
+  if(gachaShards<GACHA_PULL_COST) return;
+  gachaShards-=GACHA_PULL_COST;
+  var picked=rollGachaOnce();
+  var resultEl=document.getElementById('tdGachaResult');
+  var rarity=RARITY_INFO[picked.rarity];
+  if(ownedSkins.indexOf(picked.id)>=0){
+    var refund=Math.ceil(GACHA_PULL_COST*0.6);
+    gachaShards+=refund;
+    resultEl.innerHTML='<span style="color:'+rarity.color+';">'+picked.name+'</span> (중복) → 조각 '+refund+'개 환급';
+  } else {
+    ownedSkins.push(picked.id);
+    resultEl.innerHTML='🎉 <span style="color:'+rarity.color+';">['+rarity.name+'] '+picked.name+'</span> 획득!';
+  }
+  sfxLucky();
+  scheduleSync();
+  renderGachaPanel();
+}
+document.getElementById('tdGachaOpenBtn').addEventListener('click', function(){
+  loggedInMenuEl.style.display='none';
+  renderGachaPanel();
+  document.getElementById('tdGachaOverlay').style.display='flex';
+});
+document.getElementById('tdGachaCloseBtn').addEventListener('click', function(){
+  document.getElementById('tdGachaOverlay').style.display='none';
+  loggedInMenuEl.style.display='flex';
+});
+document.getElementById('tdGachaPullBtn').addEventListener('click', pullGacha);
 document.getElementById('tdWikiTabTower').addEventListener('click', function(){
   wikiTab='tower';
   this.style.background='rgba(240,185,11,0.25)'; this.style.borderColor='rgba(240,185,11,0.5)';
@@ -4529,6 +4685,7 @@ document.getElementById('tdLogoutBtn').addEventListener('click', function(){
   if(fbReady()){ firebase.auth().signOut(); }
   currentUser=null; currentNickname=null; pendingResume=null;
   researchPoints=0; sessionBest=0; cpuRating=CPU_RATING_DEFAULT;
+  gachaShards=0; ownedSkins=['default']; equippedSkin='default';
   Object.keys(research).forEach(function(k){ research[k]=0; });
   loadLocalXP(); // 게스트 전용 로컬 캐시로 전환 (mtdd_userXP_guest)
   refreshLevelUI();
