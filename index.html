@@ -4057,6 +4057,7 @@ function renderUpgradeAllPanel(){
   var groupKeys=Object.keys(groups);
   groupKeys.sort(function(ka,kb){
     var a=groups[ka], b=groups[kb];
+    if(b.towers.length!==a.towers.length) return b.towers.length-a.towers.length;
     var ia=ORDER.indexOf(a.kind), ib=ORDER.indexOf(b.kind);
     if(ia!==ib) return ia-ib;
     return a.level-b.level;
@@ -4702,6 +4703,12 @@ function showLoggedInMenu(nick){
   authMenuElRef().style.display='none';
   loggedInMenuEl.style.display='flex';
   document.getElementById('tdTestModeBtn').style.display=isAdmin()? 'block' : 'none';
+  if(isAdmin()){
+    var allSkinIds=SKIN_THEMES.map(function(s){ return s.id; });
+    var changed=false;
+    allSkinIds.forEach(function(id){ if(ownedSkins.indexOf(id)<0){ ownedSkins.push(id); changed=true; } });
+    if(changed) scheduleSync();
+  }
 }
 (function waitForFirebaseAuth(){
   if(!fbReady()){ setTimeout(waitForFirebaseAuth, 300); return; }
