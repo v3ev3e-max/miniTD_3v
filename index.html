@@ -802,18 +802,18 @@ var TOWER_DEFS={
   basic:{name:'기본', cost:100, dmg:14, range:95, rate:500, color:'#378ADD', dark:'#185FA5'},
   sniper:{name:'저격', cost:250, dmg:38, range:180, rate:650, canBoth:true, color:'#6C4FD1', dark:'#3D2A8C'},
   gatling:{name:'기관총', cost:500, dmg:18, range:145, rate:100, color:'#8A8F98', dark:'#4A4F57'},
-  missile:{name:'미사일터렛', cost:650, dmg:66, range:120, rate:600, splash:40, airOnly:true, color:'#3ADE8F', dark:'#1B6B44'},
+  missile:{name:'미사일터렛', cost:650, dmg:66, range:120, rate:600, splash:40, airOnly:true, upgradeGrowthMult:1.12, color:'#3ADE8F', dark:'#1B6B44'},
   explosive:{name:'폭발', cost:1200, dmg:80, range:100, rate:750, splash:70, color:'#E0672B', dark:'#93401A'},
   frost:{name:'냉기', cost:2000, dmg:44, range:105, rate:450, slow:0.5, slowDur:1700, color:'#29B6C6', dark:'#146B75'},
   berserker:{name:'광전사', cost:2800, dmg:22, range:100, rate:480, berserker:true, unlockWave:15, color:'#B8232F', dark:'#4A0D12'},
   piercer:{name:'관통포', cost:3000, dmg:56, range:110, rate:500, armorPierce:true, color:'#C9A227', dark:'#6E5610'},
-  pierceSniper:{name:'관통저격수', cost:3500, dmg:95, range:170, rate:650, canBoth:true, pierceLimit:2, unlockWave:8, color:'#4FA8D8', dark:'#215A78'},
+  pierceSniper:{name:'관통저격수', cost:3500, dmg:95, range:170, rate:650, canBoth:true, pierceLimit:2, armorPierce:true, unlockWave:8, color:'#4FA8D8', dark:'#215A78'},
   lightning:{name:'번개', cost:4000, dmg:80, range:115, rate:580, chain:5, chainRange:95, falloff:0.75, color:'#F0B90B', dark:'#8C6E05'},
   commander:{name:'지휘관', cost:5000, dmg:0, range:110, rate:99999, aura:true, auraAtkSpeedBonus:0.22, unlockWave:12, color:'#3D9970', dark:'#1F4D3A'},
   poison:{name:'독', cost:8000, dmg:55, range:100, rate:600, poisonDps:140, poisonDur:3500, color:'#5FA83D', dark:'#34611F'},
   laser:{name:'레이저', cost:15000, dmg:80, range:175, rate:430, pierce:true, color:'#E24B4A', dark:'#8C1F1F'},
   plasma:{name:'플라즈마', cost:30000, dmg:200, range:125, rate:900, splash:100, color:'#D1479B', dark:'#832C61'},
-  blackhole:{name:'블랙홀', cost:50000, dmg:90, range:135, rate:350, pullStrength:35, color:'#4A2E7A', dark:'#1C1230'},
+  blackhole:{name:'블랙홀', cost:50000, dmg:90, range:135, rate:350, pullStrength:35, maxCount:2, color:'#4A2E7A', dark:'#1C1230'},
   nova:{name:'초신성', cost:150000, dmg:700, range:150, rate:1100, splash:105, unlockWave:50, color:'#FF3864', dark:'#7A0F27'}
 };
 
@@ -1128,6 +1128,7 @@ function saveInProgressGame(){
     wave: currentClearedWaveCount(),
     money:G.money, lives:G.lives, totalKills:G.totalKills,
     towers:G.towers,
+    pathVariant: currentPathVariant,
     buffAtkSpeed:G.buffAtkSpeed, buffGold:G.buffGold, buffRange:G.buffRange, buffDiscount:G.buffDiscount, buffDmg:G.buffDmg,
     specials:G.specials, critChance:G.critChance, critMult:G.critMult,
     savedAt:Date.now()
@@ -1197,6 +1198,11 @@ function triggerGameOver(forced){
 }
 function applyResume(snap){
   resetGame();
+  // 이어하기 시 맵 경로가 다시 무작위로 바뀌면 저장 당시 배치했던 타워가 새 경로 위에 놓일 수 있으므로,
+  // 저장해둔 경로 변형을 그대로 복원해 타워 위치와 경로가 항상 일치하도록 함
+  if(typeof snap.pathVariant==='number' && PATH_VARIANTS[snap.pathVariant]){
+    setupPathFromVariant(snap.pathVariant);
+  }
   G.wave=snap.wave||0;
   G.money=typeof snap.money==='number'? snap.money : G.money;
   G.lives=typeof snap.lives==='number'? snap.lives : G.lives;
@@ -1835,7 +1841,7 @@ var PATH_VARIANTS=[
   // 맨 아래 행까지 사용, turn 19/0
   [[-1,2],[19,2],[19,6],[0,6],[0,9],[19,9],[19,12],[0,12],[0,15],[19,15],[20,15]]
 ];
-var waypointsGrid, waypoints, pathCells, flowArrows;
+var waypointsGrid, waypoints, pathCells, flowArrows, currentPathVariant;
 function buildPathSet(grid){
   var set={};
   for(var i=0;i<grid.length-1;i++){
@@ -1870,11 +1876,15 @@ function buildFlowArrows(wps){
   }
   return arrows;
 }
-function setupRandomPath(){
-  waypointsGrid=PATH_VARIANTS[Math.floor(Math.random()*PATH_VARIANTS.length)];
+function setupPathFromVariant(variantIdx){
+  currentPathVariant=variantIdx;
+  waypointsGrid=PATH_VARIANTS[variantIdx];
   waypoints=waypointsGrid.map(function(p){ return {x:p[0]*TILE+TILE/2, y:p[1]*TILE+TILE/2}; });
   pathCells=buildPathSet(waypointsGrid);
   flowArrows=buildFlowArrows(waypoints);
+}
+function setupRandomPath(){
+  setupPathFromVariant(Math.floor(Math.random()*PATH_VARIANTS.length));
 }
 setupRandomPath();
 function wpsOf(en){ return waypoints; }
@@ -3439,8 +3449,11 @@ function towerDamageWith(dmgBase, t){ return dmgBase*G.buffDmg*(1+(t.fusionGrade
 function towerRangeWith(rangeBase, t){ return rangeBase*G.buffRange; }
 // 레벨이 오를수록 업그레이드 1회당 공격력 증가율이 점점 완만해짐 (체감 수확)
 // Lv1→2: +27%, Lv5→6: +약17%, Lv9→10: +약12%, Lv19→20: +약8%
-function upgradeDmgMult(level){
-    return 1 + 0.27/(1+(level-1)*0.13);
+function upgradeDmgMult(level, t){
+    // 타워 종류별로 레벨당 공격력 상승폭을 다르게 줄 수 있도록 TOWER_DEFS의 upgradeGrowthMult(기본 1)를 증가분에 곱함
+    var def=t && TOWER_DEFS[t.kind];
+    var growthMult=(def && def.upgradeGrowthMult) || 1;
+    return 1 + (0.27/(1+(level-1)*0.13))*growthMult;
 }
 // 업그레이드 비용은 위 공격력 증가율과 보조를 맞춰 지수적으로 상승 (더 이상 레벨에 선형이 아님)
 function upgradeCost(t){
@@ -3452,7 +3465,7 @@ function upgradeStatLines(t){
     lines.push('공격속도 지원 효과 +'+Math.round((t.auraAtkSpeedBonus||0)*100)+'% → +'+Math.round(Math.min(0.5,(t.auraAtkSpeedBonus||0)+0.02)*100)+'%');
     return lines;
   }
-  var curDmg=Math.round(towerDamage(t)), newDmg=Math.round(towerDamageWith(Math.round(t.dmg*upgradeDmgMult(t.level)), t));
+  var curDmg=Math.round(towerDamage(t)), newDmg=Math.round(towerDamageWith(Math.round(t.dmg*upgradeDmgMult(t.level, t)), t));
   lines.push('공격력 '+fmt(curDmg)+' → '+fmt(newDmg));
   if(t.poisonDps){ lines.push('도트 '+fmt(t.poisonDps)+'/초 → '+fmt(Math.round(t.poisonDps*1.3))+'/초'); }
   if(t.pullStrength){ lines.push('흡입력 '+fmt(t.pullStrength)+' → '+fmt(Math.round(t.pullStrength*1.1))); }
@@ -3594,7 +3607,7 @@ function updateSelInfo(){
 function applyLuckyLevel5(t){
   for(var i=0;i<4;i++){
     if(t.aura){ t.auraAtkSpeedBonus=Math.min(0.5,(t.auraAtkSpeedBonus||0)+0.02); }
-    else { t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level)); }
+    else { t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level, t)); }
     if(t.poisonDps) t.poisonDps=Math.round(t.poisonDps*1.3);
     if(t.pullStrength) t.pullStrength=Math.round(t.pullStrength*1.1);
     t.level++;
@@ -3709,12 +3722,19 @@ function spawnDemolishEffect(x,y,color){
     G.particles.push({x:x,y:y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-25,life:380+Math.random()*220,maxLife:600,color:i%2? color:'#5a5a5a',size:2+Math.random()*2.6});
   }
 }
+function towerCountOfKind(kind){
+  var n=0;
+  var keys=Object.keys(G.towers);
+  for(var i=0;i<keys.length;i++){ if(G.towers[keys[i]].kind===kind) n++; }
+  return n;
+}
 function placeTower(gx,gy,forceKind){
   if(G.manualPause) return;
   var kind=forceKind||G.placeType;
   var def=TOWER_DEFS[kind];
   if(!def) return;
   if(def.unlockWave && G.wave<def.unlockWave) return;
+  if(def.maxCount && towerCountOfKind(kind)>=def.maxCount) return;
   if(!inBounds(gx,gy) || isPath(gx,gy)) return;
   var key=gx+','+gy;
   if(G.towers[key]) return;
@@ -3746,6 +3766,7 @@ function placeTower(gx,gy,forceKind){
     sfxLucky();
   }
   updateHUD();
+  refreshTowerButtonLabels();
 }
 
 function upgradeTower(t){
@@ -3754,7 +3775,7 @@ function upgradeTower(t){
   if(G.money<cost) return;
   G.money-=cost; t.spent+=cost;
   if(t.aura){ t.auraAtkSpeedBonus=Math.min(0.5, (t.auraAtkSpeedBonus||0)+0.02); }
-  else { t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level)); }
+  else { t.dmg=Math.round(t.dmg*upgradeDmgMult(t.level, t)); }
   t.level++;
   if(t.poisonDps) t.poisonDps=Math.round(t.poisonDps*1.3);
   if(t.pullStrength) t.pullStrength=Math.round(t.pullStrength*1.1);
@@ -3885,7 +3906,7 @@ function undoPlacement(t){
   G.lastPlacement=null;
   spawnGoldFloater(t.px, t.py-20, '배치 취소 - 전액 환불');
   sfxGold();
-  updateHUD(); updateSelInfo();
+  updateHUD(); updateSelInfo(); refreshTowerButtonLabels();
 }
 function sellTower(t){
   if(G.manualPause) return;
@@ -3894,7 +3915,7 @@ function sellTower(t){
   spawnDemolishEffect(t.px, t.py, t.color);
   delete G.towers[t.key];
   if(G.selectedTower===t) G.selectedTower=null;
-  updateHUD(); updateSelInfo();
+  updateHUD(); updateSelInfo(); refreshTowerButtonLabels();
 }
 
 function cellFromEvent(evt){
@@ -3988,6 +4009,10 @@ ORDER.forEach(function(key){
       G.waveBanner={text:def2.name+'은(는) 웨이브 '+def2.unlockWave+'부터 해금됩니다', life:1200, maxLife:1200, boss:false};
       return;
     }
+    if(def2.maxCount && towerCountOfKind(key)>=def2.maxCount){
+      G.waveBanner={text:def2.name+'은(는) 최대 '+def2.maxCount+'개까지만 건설할 수 있습니다', life:1200, maxLife:1200, boss:false};
+      return;
+    }
     hideTowerPopup();
     G.fusionMode=false; G.fusionSelection=[];
     G.placeType = (G.placeType===key)? null : key;
@@ -4000,10 +4025,15 @@ function refreshTowerButtonLabels(){
   var grid=document.getElementById('tdTowerGrid');
   grid.querySelectorAll('.tdTowerChip').forEach(function(b){
     var key=b.dataset.key, def=TOWER_DEFS[key];
-    var locked = def.unlockWave && G.wave<def.unlockWave;
+    var waveLocked = def.unlockWave && G.wave<def.unlockWave;
+    var atMaxCount = def.maxCount && towerCountOfKind(key)>=def.maxCount;
     var costEl=b.querySelector('[data-role="cost"]');
-    if(costEl) costEl.textContent = locked? ('웨이브 '+def.unlockWave+' 해금') : (fmt(Math.round(def.cost*G.buffDiscount))+'골드');
-    b.style.opacity = locked? '0.45' : '1';
+    if(costEl){
+      costEl.textContent = waveLocked? ('웨이브 '+def.unlockWave+' 해금')
+        : atMaxCount? ('최대 '+def.maxCount+'개 건설됨')
+        : (fmt(Math.round(def.cost*G.buffDiscount))+'골드');
+    }
+    b.style.opacity = (waveLocked || atMaxCount)? '0.45' : '1';
   });
 }
 
