@@ -213,7 +213,7 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
           <div>· 타이틀로 나가기, 확대(1.0/1.5/2.0x), 일괄 업그레이드, 오토플레이 모드</div>
           <div>· 신규 타워: 광전사(킬 누적 강화), 럭키 설치(0.5% 확률 Lv.5 즉시 획득)</div>
           <div>· 타워 시너지: 중독 상태 데미지+15%, 냉기+번개 연쇄사거리↑, 번개가 독 지속시간 연장</div>
-          <div>· 배경음악 8곡 순환, 타워 건설/업그레이드/철거 이펙트</div>
+          <div>· 배경음악 6곡 순환 (드럼/딜레이 추가로 리뉴얼), 타워 건설/업그레이드/철거 이펙트</div>
           <div>· 경로가 매 판 무작위로 바뀜 (여러 패턴 중 선택)</div>
         </div>
         <div>
@@ -476,6 +476,7 @@ function applyTheme(){
 }
 
 var audioCtx=null, musicGain=null, sfxGain=null, musicMuted=false, sfxMuted=false, sfxLast={};
+var musicDelay=null, musicDelayFeedback=null, musicDelayWet=null;
 var SFX_GAIN_MULT=1.9;
 function ensureAudio(){
   if(!audioCtx){
@@ -487,6 +488,17 @@ function ensureAudio(){
       sfxGain=audioCtx.createGain();
       sfxGain.gain.value = sfxMuted? 0 : 1;
       sfxGain.connect(audioCtx.destination);
+      // 리드 멜로디에 은은한 딜레이감을 더해 단순한 칩튠 느낌을 줄이고 공간감을 살림
+      musicDelay=audioCtx.createDelay(1.0);
+      musicDelay.delayTime.value=0.185;
+      musicDelayFeedback=audioCtx.createGain();
+      musicDelayFeedback.gain.value=0.3;
+      musicDelayWet=audioCtx.createGain();
+      musicDelayWet.gain.value=0.24;
+      musicDelay.connect(musicDelayFeedback);
+      musicDelayFeedback.connect(musicDelay);
+      musicDelay.connect(musicDelayWet);
+      musicDelayWet.connect(musicGain);
     }catch(e){ audioCtx=null; }
   }
   if(audioCtx && audioCtx.state==='suspended'){ audioCtx.resume(); }
@@ -505,7 +517,7 @@ function canPlaySfx(key,minGap){
   sfxLast[key]=now;
   return true;
 }
-function playTone(freq,dur,type,vol,delay,bus,filterFreq){
+function playTone(freq,dur,type,vol,delay,bus,filterFreq,wet){
   if(!audioCtx) return;
   var target = bus==='music'? musicGain : sfxGain;
   if(!target) return;
@@ -525,6 +537,7 @@ function playTone(freq,dur,type,vol,delay,bus,filterFreq){
     } else {
       osc.connect(gain); gain.connect(target);
     }
+    if(wet && bus==='music' && musicDelay){ gain.connect(musicDelay); }
     osc.start(t0); osc.stop(t0+dur+0.03);
   }catch(e){}
 }
@@ -593,74 +606,139 @@ function playHat(delay,vol){
     src.start(audioCtx.currentTime+(delay||0));
   }catch(e){}
 }
+var snareNoiseBuffer=null;
+function makeSnareNoiseBuffer(){
+  if(!audioCtx) return null;
+  var len=Math.floor(audioCtx.sampleRate*0.16);
+  var buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+  var data=buf.getChannelData(0);
+  for(var i=0;i<len;i++){ data[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.6); }
+  return buf;
+}
+// 단순한 8비트 느낌을 없애기 위해 킥/스네어를 더해 곡에 리듬 파트(드럼)를 부여함
+function playKick(delay,vol){
+  if(!audioCtx || !musicGain) return;
+  try{
+    var t0=audioCtx.currentTime+(delay||0);
+    var osc=audioCtx.createOscillator();
+    var gain=audioCtx.createGain();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(155,t0);
+    osc.frequency.exponentialRampToValueAtTime(42,t0+0.16);
+    gain.gain.setValueAtTime((vol||0.5)*SFX_GAIN_MULT,t0);
+    gain.gain.exponentialRampToValueAtTime(0.001,t0+0.26);
+    osc.connect(gain); gain.connect(musicGain);
+    osc.start(t0); osc.stop(t0+0.28);
+  }catch(e){}
+}
+function playSnare(delay,vol){
+  if(!audioCtx || !musicGain) return;
+  if(!snareNoiseBuffer) snareNoiseBuffer=makeSnareNoiseBuffer();
+  if(!snareNoiseBuffer) return;
+  try{
+    var t0=audioCtx.currentTime+(delay||0);
+    var src=audioCtx.createBufferSource();
+    src.buffer=snareNoiseBuffer;
+    var g=audioCtx.createGain();
+    g.gain.setValueAtTime((vol||0.16)*SFX_GAIN_MULT,t0);
+    g.gain.exponentialRampToValueAtTime(0.001,t0+0.15);
+    var bp=audioCtx.createBiquadFilter();
+    bp.type='bandpass'; bp.frequency.value=1900; bp.Q.value=0.7;
+    src.connect(bp); bp.connect(g); g.connect(musicGain);
+    src.start(t0);
+    var osc=audioCtx.createOscillator();
+    var og=audioCtx.createGain();
+    osc.type='triangle'; osc.frequency.setValueAtTime(190,t0);
+    og.gain.setValueAtTime((vol||0.16)*0.45*SFX_GAIN_MULT,t0);
+    og.gain.exponentialRampToValueAtTime(0.001,t0+0.1);
+    osc.connect(og); og.connect(musicGain);
+    osc.start(t0); osc.stop(t0+0.12);
+  }catch(e){}
+}
 
 var SONGS=[
-  { // Song A - 파워 신스팝 (질주감 있는 리드, C-G-Am-F)
-    bpm:160,
-    melodyWave:'sawtooth', melodyFilter:2400, bassWave:'sine', chordWave:'triangle', chordFilter:1800,
+  { // Song 1 - 사이버 돌격 (질주하는 신스 리드 + 록 비트, Em-C-D-Em)
+    bpm:184,
+    melodyWave:'sawtooth', melodyFilter:2600, bassWave:'sawtooth', bassFilter:1000, chordWave:'triangle', chordFilter:1500,
     melody:[
-      [0,523.25,0.28],[1,587.33,0.22],[2,659.25,0.28],[3.5,587.33,0.22],
-      [4,523.25,0.28],[5,440.0,0.22],[6,493.88,0.28],[7,523.25,0.32]
+      [0,659.25,0.22],[0.5,739.99,0.16],[1,659.25,0.18],[1.5,587.33,0.16],
+      [2,523.25,0.22],[2.5,587.33,0.16],[3,659.25,0.2],[3.5,523.25,0.16],
+      [4,587.33,0.22],[4.5,659.25,0.16],[5,739.99,0.2],[5.5,659.25,0.16],
+      [6,587.33,0.22],[6.5,493.88,0.16],[7,587.33,0.2],[7.5,659.25,0.28]
     ],
     bass:[
-      [0,130.81,0.42],[1,130.81,0.24],[2,196.00,0.42],[3,196.00,0.24],
-      [4,220.00,0.42],[5,220.00,0.24],[6,174.61,0.42],[7,174.61,0.24]
+      [0,164.81,0.24],[0.5,164.81,0.18],[1,164.81,0.24],[1.5,164.81,0.18],
+      [2,130.81,0.24],[2.5,130.81,0.18],[3,130.81,0.24],[3.5,130.81,0.18],
+      [4,146.83,0.24],[4.5,146.83,0.18],[5,146.83,0.24],[5.5,146.83,0.18],
+      [6,164.81,0.24],[6.5,164.81,0.18],[7,164.81,0.24],[7.5,164.81,0.18]
     ],
     chords:[
-      [0,[261.63,329.63,392.00],1.9],
-      [2,[196.00,246.94,293.66],1.9],
-      [4,[220.00,261.63,329.63],1.9],
-      [6,[174.61,220.00,261.63],1.9]
+      [0,[164.81,196.00,246.94],1.9],
+      [2,[130.81,164.81,196.00],1.9],
+      [4,[146.83,185.00,220.00],1.9],
+      [6,[164.81,196.00,246.94],1.9]
     ],
-    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
+    hat:[0.5,1,1.5,2.5,3,3.5,4.5,5,5.5,6.5,7,7.5],
+    kick:[0,2,3.5,4,6,7.5],
+    snare:[1,3,5,7]
   },
-  { // Song B - 신스웨이브 드라이브 (밤거리를 달리는 필터 리드, Am-F-C-G)
-    bpm:166,
-    melodyWave:'sawtooth', melodyFilter:2000, bassWave:'sawtooth', bassFilter:900, chordWave:'triangle', chordFilter:1400,
+  { // Song 2 - 네온 웨이브 (드라이빙 아르페지오, Am-F-C-G)
+    bpm:180,
+    melodyWave:'sawtooth', melodyFilter:2300, bassWave:'sawtooth', bassFilter:850, chordWave:'triangle', chordFilter:1600,
     melody:[
-      [0,440.0,0.3],[0.75,523.25,0.22],[1.5,493.88,0.3],[2.25,440.0,0.22],
-      [3,392.0,0.3],[4,440.0,0.22],[4.75,523.25,0.3],[5.5,587.33,0.22],
-      [6,523.25,0.3],[7,466.16,0.32]
+      [0,440.0,0.2],[0.5,523.25,0.16],[1,659.25,0.22],[1.5,587.33,0.16],
+      [2,523.25,0.2],[2.5,440.0,0.16],[3,349.23,0.22],[3.5,440.0,0.16],
+      [4,523.25,0.2],[4.5,659.25,0.16],[5,523.25,0.22],[5.5,440.0,0.16],
+      [6,392.0,0.2],[6.5,493.88,0.16],[7,587.33,0.22],[7.5,392.0,0.28]
     ],
     bass:[
-      [0,110.00,0.4],[1,110.00,0.24],[2,87.31,0.4],[3,87.31,0.24],
-      [4,130.81,0.4],[5,130.81,0.24],[6,98.00,0.4],[7,98.00,0.24]
+      [0,220.00,0.22],[0.5,220.00,0.16],[1,220.00,0.22],[1.5,220.00,0.16],
+      [2,174.61,0.22],[2.5,174.61,0.16],[3,174.61,0.22],[3.5,174.61,0.16],
+      [4,130.81,0.22],[4.5,130.81,0.16],[5,130.81,0.22],[5.5,130.81,0.16],
+      [6,98.00,0.22],[6.5,98.00,0.16],[7,98.00,0.22],[7.5,98.00,0.16]
     ],
     chords:[
       [0,[220.00,261.63,329.63],1.9],
       [2,[174.61,220.00,261.63],1.9],
-      [4,[130.81,164.81,196.00],1.9],
+      [4,[261.63,329.63,392.00],1.9],
       [6,[196.00,246.94,293.66],1.9]
     ],
-    hat:[0.5,1,1.5,2.5,3,3.5,4.5,5,5.5,6.5,7,7.5]
+    hat:[0.5,1,1.5,2,2.5,3,3.5,4.5,5,5.5,6,6.5,7,7.5],
+    kick:[0,2,4,6],
+    snare:[1,3,5,7]
   },
-  { // Song C - 칩튠 스프린트 (경쾌한 8비트풍, F-C-G-Am)
-    bpm:170,
-    melodyWave:'square', melodyFilter:0, bassWave:'square', chordWave:'triangle', chordFilter:1900,
+  { // Song 3 - 레이드 프로토콜 (긴박한 마이너 리프, Dm-Bb-F-C)
+    bpm:190,
+    melodyWave:'sawtooth', melodyFilter:2800, bassWave:'square', bassFilter:1800, chordWave:'sawtooth', chordFilter:1100,
     melody:[
-      [0,349.23,0.18],[0.5,440.0,0.15],[1,523.25,0.18],[1.5,440.0,0.15],
-      [2,523.25,0.18],[2.5,587.33,0.15],[3,659.25,0.22],[3.5,587.33,0.15],
-      [4,392.0,0.18],[4.5,493.88,0.15],[5,587.33,0.18],[5.5,493.88,0.15],
-      [6,440.0,0.18],[6.5,523.25,0.15],[7,587.33,0.22],[7.5,493.88,0.15]
+      [0,587.33,0.18],[0.5,587.33,0.14],[1,698.46,0.18],[1.5,587.33,0.14],
+      [2,523.25,0.18],[2.5,466.16,0.14],[3,523.25,0.18],[3.5,587.33,0.14],
+      [4,698.46,0.18],[4.5,659.25,0.14],[5,587.33,0.18],[5.5,523.25,0.14],
+      [6,466.16,0.18],[6.5,523.25,0.14],[7,587.33,0.2],[7.5,698.46,0.26]
     ],
     bass:[
-      [0,174.61,0.3],[1,174.61,0.18],[2,130.81,0.3],[3,130.81,0.18],
-      [4,196.00,0.3],[5,196.00,0.18],[6,220.00,0.3],[7,220.00,0.18]
+      [0,146.83,0.2],[0.5,146.83,0.14],[1,146.83,0.2],[1.5,146.83,0.14],
+      [2,116.54,0.2],[2.5,116.54,0.14],[3,116.54,0.2],[3.5,116.54,0.14],
+      [4,174.61,0.2],[4.5,174.61,0.14],[5,174.61,0.2],[5.5,174.61,0.14],
+      [6,130.81,0.2],[6.5,130.81,0.14],[7,130.81,0.2],[7.5,130.81,0.14]
     ],
     chords:[
-      [0,[174.61,220.00,261.63],1.7],
-      [2,[130.81,164.81,196.00],1.7],
-      [4,[196.00,246.94,293.66],1.7],
-      [6,[220.00,261.63,329.63],1.7]
+      [0,[146.83,174.61,220.00],1.9],
+      [2,[116.54,146.83,174.61],1.9],
+      [4,[174.61,220.00,261.63],1.9],
+      [6,[130.81,164.81,196.00],1.9]
     ],
-    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
+    hat:[0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25,5.75,6.25,6.75,7.25,7.75],
+    kick:[0,1,2,3,4,5,6,7],
+    snare:[1,3,5,7]
   },
-  { // Song D - 트랜스 펄스 (몰아치는 옥타브 베이스, Cm-Ab-Eb-Bb)
-    bpm:150,
-    melodyWave:'sine', bassWave:'sawtooth', bassFilter:700, chordWave:'triangle', chordFilter:1600,
+  { // Song 4 - 타워 포트리스 (웅장한 코드, Cm-Ab-Eb-Bb)
+    bpm:176,
+    melodyWave:'triangle', melodyFilter:3200, bassWave:'sawtooth', bassFilter:750, chordWave:'sawtooth', chordFilter:1300,
     melody:[
       [0,523.25,0.3],[1,622.25,0.24],[2,698.46,0.3],[3,622.25,0.24],
-      [4,554.37,0.3],[5,466.16,0.24],[6,523.25,0.3],[7,622.25,0.28]
+      [4,554.37,0.3],[4.75,622.25,0.2],[5,466.16,0.24],[6,523.25,0.3],
+      [7,622.25,0.24],[7.5,698.46,0.3]
     ],
     bass:[
       [0,130.81,0.24],[0.5,130.81,0.2],[1,130.81,0.24],[1.5,130.81,0.2],
@@ -674,93 +752,59 @@ var SONGS=[
       [4,[155.56,196.00,233.08],1.9],
       [6,[233.08,293.66,349.23],1.9]
     ],
-    hat:[1,3,5,7]
+    hat:[0.5,1,1.5,2.5,3,3.5,4.5,5,5.5,6.5,7,7.5],
+    kick:[0,2,3.5,4,6,7.5],
+    snare:[1,3,5,7]
   },
-  { // Song E - 락 리프 (드라이브감 있는 파워코드, Em-C-G-D)
-    bpm:162,
-    melodyWave:'sawtooth', melodyFilter:2600, bassWave:'square', chordWave:'sawtooth', chordFilter:1200,
+  { // Song 5 - 오버드라이브 (가장 빠른 16비트 아르페지오, Gm-Eb-Bb-F)
+    bpm:194,
+    melodyWave:'sawtooth', melodyFilter:3200, bassWave:'sine', bassFilter:0, chordWave:'sawtooth', chordFilter:1000,
     melody:[
-      [0,659.25,0.22],[0.5,659.25,0.18],[1,587.33,0.22],[1.5,659.25,0.18],
-      [2,523.25,0.22],[2.5,523.25,0.18],[3,493.88,0.22],[3.5,523.25,0.18],
-      [4,392.0,0.22],[4.5,392.0,0.18],[5,440.0,0.22],[5.5,493.88,0.18],
-      [6,587.33,0.22],[6.5,587.33,0.18],[7,523.25,0.26]
+      [0,392.0,0.14],[0.25,466.16,0.12],[0.5,587.33,0.14],[0.75,466.16,0.12],
+      [1,440.0,0.14],[1.25,523.25,0.12],[1.5,622.25,0.14],[1.75,523.25,0.12],
+      [2,466.16,0.14],[2.25,554.37,0.12],[2.5,698.46,0.14],[2.75,554.37,0.12],
+      [3,466.16,0.18],[3.5,587.33,0.18],[4,349.23,0.14],[4.25,440.0,0.12],
+      [4.5,523.25,0.14],[4.75,440.0,0.12],[5,392.0,0.14],[5.25,466.16,0.12],
+      [5.5,587.33,0.14],[5.75,466.16,0.12],[6,349.23,0.14],[6.25,415.30,0.12],
+      [6.5,523.25,0.14],[6.75,415.30,0.12],[7,392.0,0.2],[7.5,466.16,0.26]
     ],
     bass:[
-      [0,164.81,0.24],[0.5,164.81,0.18],[1,164.81,0.24],[1.5,164.81,0.18],
-      [2,130.81,0.24],[2.5,130.81,0.18],[3,130.81,0.24],[3.5,130.81,0.18],
-      [4,196.00,0.24],[4.5,196.00,0.18],[5,196.00,0.24],[5.5,196.00,0.18],
-      [6,146.83,0.24],[6.5,146.83,0.18],[7,146.83,0.24],[7.5,146.83,0.18]
+      [0,196.00,0.36],[2,155.56,0.36],[4,116.54,0.36],[6,174.61,0.36]
     ],
     chords:[
-      [0,[164.81,196.00,246.94],1.7],
-      [2,[130.81,164.81,196.00],1.7],
-      [4,[196.00,246.94,293.66],1.7],
-      [6,[146.83,185.00,220.00],1.7]
+      [0,[196.00,233.08,293.66],1.9],
+      [2,[155.56,196.00,233.08],1.9],
+      [4,[116.54,146.83,174.61],1.9],
+      [6,[174.61,220.00,261.63],1.9]
     ],
-    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
+    hat:[0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25,5.75,6.25,6.75,7.25,7.75],
+    kick:[0,1,2,3,4,5,6,7],
+    snare:[1,3,5,7]
   },
-  { // Song F - 펑키 그루브 (당김음이 강한 신스 베이스, Dm-G-C-Am)
-    bpm:155,
-    melodyWave:'triangle', bassWave:'sawtooth', bassFilter:1100, chordWave:'triangle', chordFilter:1500,
+  { // Song 6 - 파이널 웨이브 (고조되는 마무리 테마, Bm-G-D-A)
+    bpm:182,
+    melodyWave:'sawtooth', melodyFilter:2700, bassWave:'sawtooth', bassFilter:950, chordWave:'triangle', chordFilter:1700,
     melody:[
-      [0.5,587.33,0.2],[1,523.25,0.16],[2,440.0,0.2],[2.75,493.88,0.16],
-      [3.5,587.33,0.2],[4.5,659.25,0.2],[5,587.33,0.16],[6,523.25,0.2],
-      [6.75,587.33,0.16],[7.5,440.0,0.22]
+      [0,493.88,0.2],[0.5,587.33,0.16],[1,739.99,0.22],[1.5,659.25,0.16],
+      [2,587.33,0.2],[2.5,493.88,0.16],[3,392.0,0.22],[3.5,493.88,0.16],
+      [4,587.33,0.2],[4.5,698.46,0.16],[5,880.0,0.24],[5.5,739.99,0.16],
+      [6,659.25,0.2],[6.5,587.33,0.16],[7,493.88,0.22],[7.5,587.33,0.3]
     ],
     bass:[
-      [0,146.83,0.2],[0.75,146.83,0.16],[1.5,146.83,0.2],[2,196.00,0.2],
-      [2.75,196.00,0.16],[3.5,196.00,0.2],[4,130.81,0.2],[4.75,130.81,0.16],
-      [5.5,130.81,0.2],[6,220.00,0.2],[6.75,220.00,0.16],[7.5,220.00,0.2]
+      [0,123.47,0.22],[0.5,123.47,0.16],[1,123.47,0.22],[1.5,123.47,0.16],
+      [2,98.00,0.22],[2.5,98.00,0.16],[3,98.00,0.22],[3.5,98.00,0.16],
+      [4,146.83,0.22],[4.5,146.83,0.16],[5,146.83,0.22],[5.5,146.83,0.16],
+      [6,110.00,0.22],[6.5,110.00,0.16],[7,110.00,0.22],[7.5,110.00,0.16]
     ],
     chords:[
-      [0,[146.83,174.61,220.00],1.7],
-      [2,[196.00,246.94,293.66],1.7],
-      [4,[130.81,164.81,196.00],1.7],
-      [6,[220.00,261.63,329.63],1.7]
+      [0,[123.47,146.83,185.00],1.9],
+      [2,[98.00,123.47,146.83],1.9],
+      [4,[146.83,185.00,220.00],1.9],
+      [6,[110.00,138.59,164.81],1.9]
     ],
-    hat:[1,2.5,4,5.5,7]
-  },
-  { // Song G - EDM 빌드업 (상승하는 아르페지오, F-G-Am-Am)
-    bpm:168,
-    melodyWave:'sawtooth', melodyFilter:3000, bassWave:'sine', chordWave:'sawtooth', chordFilter:1000,
-    melody:[
-      [0,349.23,0.16],[0.25,440.0,0.14],[0.5,523.25,0.16],[0.75,440.0,0.14],
-      [1,392.0,0.16],[1.25,493.88,0.14],[1.5,587.33,0.16],[1.75,493.88,0.14],
-      [2,440.0,0.16],[2.25,523.25,0.14],[2.5,659.25,0.16],[2.75,523.25,0.14],
-      [3,440.0,0.2],[3.5,523.25,0.2],[4,349.23,0.16],[4.25,440.0,0.14],
-      [4.5,523.25,0.16],[4.75,440.0,0.14],[5,392.0,0.16],[5.25,493.88,0.14],
-      [5.5,587.33,0.16],[5.75,493.88,0.14],[6,440.0,0.16],[6.25,523.25,0.14],
-      [6.5,659.25,0.16],[6.75,523.25,0.14],[7,440.0,0.22],[7.5,523.25,0.26]
-    ],
-    bass:[
-      [0,174.61,0.4],[2,196.00,0.4],[4,220.00,0.4],[6,220.00,0.4]
-    ],
-    chords:[
-      [0,[174.61,220.00,261.63],1.9],
-      [2,[196.00,246.94,293.66],1.9],
-      [4,[220.00,261.63,329.63],1.9],
-      [6,[220.00,261.63,329.63],1.9]
-    ],
-    hat:[0.5,1,1.5,2,2.5,3,3.5,4.5,5,5.5,6,6.5,7,7.5]
-  },
-  { // Song H - 레트로 아케이드 (통통 튀는 리듬, C-Am-F-G)
-    bpm:152,
-    melodyWave:'square', bassWave:'triangle', chordWave:'triangle', chordFilter:1700,
-    melody:[
-      [0,523.25,0.24],[1,659.25,0.2],[1.5,587.33,0.18],[2,440.0,0.24],
-      [3,523.25,0.2],[3.5,493.88,0.18],[4,349.23,0.24],[5,440.0,0.2],
-      [5.5,392.0,0.18],[6,392.0,0.24],[7,493.88,0.2],[7.5,440.0,0.24]
-    ],
-    bass:[
-      [0,130.81,0.36],[2,220.00,0.36],[4,174.61,0.36],[6,196.00,0.36]
-    ],
-    chords:[
-      [0,[261.63,329.63,392.00],1.7],
-      [2,[220.00,261.63,329.63],1.7],
-      [4,[174.61,220.00,261.63],1.7],
-      [6,[196.00,246.94,293.66],1.7]
-    ],
-    hat:[0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5]
+    hat:[0.5,1,1.5,2,2.5,3,3.5,4.5,5,5.5,6,6.5,7,7.5],
+    kick:[0,2,3.5,4,6,7.5],
+    snare:[1,3,5,7]
   }
 ];
 
@@ -773,14 +817,20 @@ function scheduleBar(){
   var mWave=song.melodyWave||'triangle', mFilt=song.melodyFilter||0;
   var bWave=song.bassWave||'sine', bFilt=song.bassFilter||0;
   var cWave=song.chordWave||'triangle', cFilt=song.chordFilter||2200;
-  song.melody.forEach(function(n){ playTone(n[1],n[2],mWave,0.055,n[0]*beatDur,'music',mFilt); });
+  song.melody.forEach(function(n){ playTone(n[1],n[2],mWave,0.055,n[0]*beatDur,'music',mFilt,true); });
   song.bass.forEach(function(n){ playTone(n[1],n[2],bWave,0.085,n[0]*beatDur,'music',bFilt); });
   if(song.chords){
     song.chords.forEach(function(c){
-      c[1].forEach(function(f){ playTone(f,c[2],cWave,0.026,c[0]*beatDur,'music',cFilt); });
+      // 코드 톤마다 살짝 디튠된 오실레이터를 겹쳐서 얇은 8비트 화음 대신 두꺼운 신스 패드 사운드를 냄
+      c[1].forEach(function(f){
+        playTone(f,c[2],cWave,0.02,c[0]*beatDur,'music',cFilt);
+        playTone(f*1.006,c[2],cWave,0.016,c[0]*beatDur,'music',cFilt);
+      });
     });
   }
   song.hat.forEach(function(t){ playHat(t*beatDur,0.045); });
+  if(song.kick) song.kick.forEach(function(t){ playKick(t*beatDur,0.5); });
+  if(song.snare) song.snare.forEach(function(t){ playSnare(t*beatDur,0.16); });
   barCount++;
   if(barCount>=BARS_PER_SONG){ barCount=0; songIndex=(songIndex+1)%SONGS.length; }
   var barLen=beatDur*8;
