@@ -452,16 +452,46 @@ var THEME_VARS={
     '--border-accent':'#3d6bff', '--shadow-popover':'0 8px 20px rgba(0,0,0,0.25)'
   }
 };
-var CANVAS_THEME={
-  dark:{ board:'#2a3242', boardAlt:'#1b212b', border:'#4c5b73', path:'#1f5f4c', path2Dormant:'#3a3f47', arrow:'rgba(210,230,220,0.35)' },
-  light:{ board:'#ffffff', boardAlt:'#f1efe8', border:'#00000022', path:'#9FE1CB', path2Dormant:'#C9C6BA', arrow:'rgba(15,110,86,0.35)' }
+// 필드 테마: 매 판마다 무작위로 하나가 선택되어 체크무늬 필드의 색상/장식을 바꿈 (경로·설치 가능 칸 배치 자체는 변경하지 않음)
+var FIELD_THEMES={
+  greenMeadow:{
+    name:'Green Meadow',
+    dark:{ board:'#1e3a24', boardAlt:'#254a2c', border:'#3d6b46', path:'#6b4a2c', arrow:'rgba(200,240,180,0.35)' },
+    light:{ board:'#eaf7e2', boardAlt:'#d7ecc9', border:'#9cc98a99', path:'#c99a5b', arrow:'rgba(40,90,30,0.35)' },
+    deco:'grass', decoDark:'rgba(150,225,130,0.28)', decoLight:'rgba(45,110,35,0.22)'
+  },
+  abyssOcean:{
+    name:'Abyss Ocean',
+    dark:{ board:'#0b2f45', boardAlt:'#0e3a54', border:'#1c5570', path:'#0a6e6a', arrow:'rgba(180,240,230,0.35)' },
+    light:{ board:'#dff3f7', boardAlt:'#c9e9f0', border:'#7fb8c999', path:'#4fd1c5', arrow:'rgba(10,90,90,0.35)' },
+    deco:'wave', decoDark:'rgba(130,210,230,0.28)', decoLight:'rgba(20,110,130,0.22)'
+  },
+  fantasyKingdom:{
+    name:'Fantasy Kingdom',
+    dark:{ board:'#2b1f45', boardAlt:'#38295a', border:'#5b3f8c99', path:'#caa23a', arrow:'rgba(255,225,160,0.35)' },
+    light:{ board:'#f3ecff', boardAlt:'#e6d9ff', border:'#b79ee099', path:'#e0b84a', arrow:'rgba(120,80,20,0.35)' },
+    deco:'sparkle', decoDark:'rgba(255,222,150,0.32)', decoLight:'rgba(150,100,20,0.24)'
+  },
+  infernalRift:{
+    name:'Infernal Rift',
+    dark:{ board:'#2a1210', boardAlt:'#3a1613', border:'#5c231d99', path:'#b8451f', arrow:'rgba(255,150,100,0.4)' },
+    light:{ board:'#fbe2d8', boardAlt:'#f5c9b8', border:'#c96a4c99', path:'#e0653a', arrow:'rgba(150,40,10,0.35)' },
+    deco:'crack', decoDark:'rgba(255,100,50,0.3)', decoLight:'rgba(140,30,10,0.24)'
+  }
 };
+var FIELD_THEME_KEYS=Object.keys(FIELD_THEMES);
+var currentFieldTheme=FIELD_THEME_KEYS[0];
+function pickRandomFieldTheme(){
+  currentFieldTheme=FIELD_THEME_KEYS[Math.floor(Math.random()*FIELD_THEME_KEYS.length)];
+}
 var darkMode=true;
-var COL=CANVAS_THEME.dark;
+var COL=FIELD_THEMES[currentFieldTheme].dark;
 function applyTheme(){
   var th=THEME_VARS[darkMode?'dark':'light'];
   Object.keys(th).forEach(function(k){ tdRoot.style.setProperty(k, th[k]); });
-  COL=CANVAS_THEME[darkMode?'dark':'light'];
+  var ft=FIELD_THEMES[currentFieldTheme]||FIELD_THEMES[FIELD_THEME_KEYS[0]];
+  COL=ft[darkMode?'dark':'light'];
+  COL.deco=ft.deco; COL.decoColor=darkMode? ft.decoDark : ft.decoLight;
   var pageBg = darkMode? '#12161c' : '#f0efe9';
   tdRoot.style.background = darkMode? '#12161c' : 'transparent';
   tdRoot.style.padding = darkMode? '10px' : '0px';
@@ -1199,6 +1229,7 @@ function saveInProgressGame(){
     money:G.money, lives:G.lives, totalKills:G.totalKills,
     towers:G.towers,
     pathVariant: currentPathVariant,
+    fieldTheme: currentFieldTheme,
     buffAtkSpeed:G.buffAtkSpeed, buffGold:G.buffGold, buffRange:G.buffRange, buffDiscount:G.buffDiscount, buffDmg:G.buffDmg,
     specials:G.specials, critChance:G.critChance, critMult:G.critMult,
     savedAt:Date.now()
@@ -1272,6 +1303,11 @@ function applyResume(snap){
   // 저장해둔 경로 변형을 그대로 복원해 타워 위치와 경로가 항상 일치하도록 함
   if(typeof snap.pathVariant==='number' && PATH_VARIANTS[snap.pathVariant]){
     setupPathFromVariant(snap.pathVariant);
+  }
+  // 필드 테마도 마찬가지로 저장 당시 테마를 그대로 복원 (매번 랜덤으로 바뀌면 위화감이 생김)
+  if(typeof snap.fieldTheme==='string' && FIELD_THEMES[snap.fieldTheme]){
+    currentFieldTheme=snap.fieldTheme;
+    applyTheme();
   }
   G.wave=snap.wave||0;
   G.money=typeof snap.money==='number'? snap.money : G.money;
@@ -2316,6 +2352,8 @@ function resetGame(forBattle){
   G.cpuMode=false; G.cpu=null; G.battleFinalized=false; G.battleReconnectActive=false;
   G.testMode=false;
   setupRandomPath();
+  pickRandomFieldTheme();
+  applyTheme();
   var tp=document.getElementById('tdTestPanel'); if(tp) tp.style.display='none';
   var bh=document.getElementById('tdBattleHud'); if(bh) bh.style.display='none';
   var bre=document.getElementById('tdBattleResultExtra'); if(bre) bre.remove();
@@ -3027,6 +3065,44 @@ function update(dt){
   updateHUD();
 }
 
+// 타일 좌표 기반 결정적 해시 (프레임마다 달라지지 않는 안정적인 장식 패턴을 위함)
+function tileHash(gx,gy){
+  var h=(gx*374761393+gy*668265263)|0;
+  h=(h^(h>>>13))|0;
+  h=(h*1274126177)|0;
+  return (h>>>0);
+}
+// 필드 테마별로 설치 가능한 칸 위에 은은한 장식을 그려 밋밋한 체크무늬를 보완 (경로/타일 배치 자체에는 영향 없음)
+function drawTileDeco(gx,gy){
+  var deco=COL.deco;
+  if(!deco) return;
+  var h=tileHash(gx,gy);
+  var cx=gx*TILE+TILE/2, cy=gy*TILE+TILE/2;
+  ctx.strokeStyle=COL.decoColor; ctx.fillStyle=COL.decoColor; ctx.lineWidth=1;
+  if(deco==='wave'){
+    var amp=2+(h%3), yOff=((h>>>4)%7)-3;
+    ctx.beginPath();
+    ctx.moveTo(gx*TILE+4, cy+yOff);
+    ctx.quadraticCurveTo(cx, cy+yOff-amp, gx*TILE+TILE-4, cy+yOff);
+    ctx.stroke();
+  } else if(deco==='sparkle'){
+    var sx=gx*TILE+4+(h%(TILE-8)), sy=gy*TILE+4+((h>>>5)%(TILE-8));
+    var r=1+((h>>>10)%2);
+    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
+  } else if(deco==='crack'){
+    var ang=(h%628)/100, len=6+((h>>>6)%6);
+    ctx.beginPath();
+    ctx.moveTo(cx-Math.cos(ang)*len/2, cy-Math.sin(ang)*len/2);
+    ctx.lineTo(cx+Math.cos(ang)*len/2, cy+Math.sin(ang)*len/2);
+    ctx.stroke();
+  } else if(deco==='grass'){
+    var bx=gx*TILE+6+(h%(TILE-12)), by=gy*TILE+TILE-6, bh=4+((h>>>7)%4);
+    ctx.beginPath();
+    ctx.moveTo(bx,by); ctx.lineTo(bx-2,by-bh);
+    ctx.moveTo(bx,by); ctx.lineTo(bx+2,by-bh);
+    ctx.stroke();
+  }
+}
 function render(){
   ctx.save();
   ctx.clearRect(0,0,W,H);
@@ -3036,9 +3112,11 @@ function render(){
 
   for(var gy=0;gy<ROWS;gy++){
     for(var gx=0;gx<COLS;gx++){
-      if(isPath(gx,gy)) ctx.fillStyle=COL.path;
+      var onPath=isPath(gx,gy);
+      if(onPath) ctx.fillStyle=COL.path;
       else ctx.fillStyle=((gx+gy)%2===0)?COL.board:COL.boardAlt;
       ctx.fillRect(gx*TILE,gy*TILE,TILE,TILE);
+      if(!onPath) drawTileDeco(gx,gy);
       ctx.strokeStyle=COL.border; ctx.lineWidth=0.5;
       ctx.strokeRect(gx*TILE,gy*TILE,TILE,TILE);
     }
