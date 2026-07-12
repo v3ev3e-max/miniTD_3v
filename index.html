@@ -1918,7 +1918,7 @@ function handleBattleRoomFinished(room){
   var ratingHtml='';
   if(G.cpuMode){
     var before=getRankInfo(cpuRating);
-    var delta = iWon? 35 : (isDraw? 5 : -25);
+    var delta = cpuRatingDelta(iWon? 'win' : (isDraw? 'draw' : 'loss'), cpuRating);
     cpuRating=Math.max(0, cpuRating+delta);
     var after=getRankInfo(cpuRating);
     scheduleSync();
@@ -2000,6 +2000,18 @@ function getRankInfo(rating){
 function rankLabelHtml(rating){
   var info=getRankInfo(rating);
   return '<span style="color:'+info.tier.color+';">'+info.tier.icon+' '+info.tier.name+'</span> <span style="opacity:0.7;">('+info.lp+' LP)</span>';
+}
+// [CPU 랭크 승급 곡선] 낮은 티어는 승리 1회로도 다음 티어로 승급 가능할 만큼 LP를 크게 주고,
+// 티어가 높아질수록 승리당 획득량을 점점 줄여 챌린저 근처에서는 대략 3연승 정도가 있어야
+// 한 티어(200LP 구간)를 돌파하도록 함. 패배 시 감점은 반대로 상위 티어일수록 조금 더 크게 해
+// "위로 갈수록 유지하기도 빡빡하다"는 느낌을 준다. RANK_TIERS(티어 구간 자체)는 건드리지 않음.
+function cpuRatingDelta(result, currentRating){
+  var info=getRankInfo(currentRating);
+  var tierIdx=RANK_TIERS.indexOf(info.tier);
+  var t=tierIdx/(RANK_TIERS.length-1); // 0(브론즈) ~ 1(챌린저)
+  if(result==='win') return Math.round(205-140*t);   // 브론즈 +205 -> 챌린저 +65
+  if(result==='loss') return -Math.round(15+15*t);   // 브론즈 -15 -> 챌린저 -30
+  return Math.round(6-3*t);                            // 무승부 브론즈 +6 -> 챌린저 +3
 }
 // ===================================================================
 // [CPU AI 개편] 티어별 "성격"이 다른 사람 같은 CPU를 만들기 위한 프로필 테이블.
@@ -5114,6 +5126,11 @@ function showLoggedInMenu(nick){
   currentNickname=nick;
   loggedInNickEl.textContent=nick;
   authMenuElRef().style.display='none';
+  // [버그 수정] 자동 로그인이 완료되기 전에 사용자가 로그인/회원가입 버튼을 눌러 인증 폼을 열어둔 경우,
+  // 자동 로그인 콜백(onAuthStateChanged)이 나중에 이 함수를 호출하면서 로그인 폼을 안 닫고 있어
+  // 로그인 메뉴와 인증 폼이 동시에 표시되는 문제가 있었음 - 여기서도 확실히 닫아줌.
+  var authFormElNow=document.getElementById('tdAuthForm');
+  if(authFormElNow) authFormElNow.style.display='none';
   loggedInMenuEl.style.display='flex';
   document.getElementById('tdTestModeBtn').style.display=isAdmin()? 'block' : 'none';
 }
