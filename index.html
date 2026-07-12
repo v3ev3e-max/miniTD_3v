@@ -6,6 +6,20 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
 #tdRoot{ padding-left:max(0px, env(safe-area-inset-left)); padding-right:max(0px, env(safe-area-inset-right)); padding-bottom:max(0px, env(safe-area-inset-bottom)); padding-top:max(0px, env(safe-area-inset-top)); }
 #tdRoot *{box-sizing:border-box;}
 #tdRoot button{cursor:pointer; font-family:inherit;}
+/* [비주얼 개선] 전용 클래스가 없는 기본 버튼(결과창의 다시시작/연구소/랭킹보기, 각종 닫기/취소 버튼 등)에
+   최소한의 입체감과 호버/클릭 애니메이션을 부여함. 낮은 명시도(button 태그 셀렉터만 사용)로 작성해
+   .tdCtrlBtn/.tdPopBtn 등 기존 전용 클래스를 가진 버튼의 스타일은 그대로 우선 적용되어 영향 없음. */
+button{ background:linear-gradient(160deg, var(--surface-2), var(--surface-1)); color:var(--text-primary); border:1px solid var(--border); border-radius:10px; font-weight:600; transition:transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease; box-shadow:0 1px 2px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.06); }
+button:hover{ transform:translateY(-1px); filter:brightness(1.08); box-shadow:0 5px 12px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08); }
+button:active{ transform:translateY(0) scale(0.95); filter:brightness(0.94); box-shadow:0 1px 2px rgba(0,0,0,0.2); }
+button:disabled{ opacity:0.5; cursor:default; filter:none !important; transform:none !important; }
+@keyframes tdPopIn{ 0%{ opacity:0; transform:scale(0.94) translateY(8px); } 100%{ opacity:1; transform:scale(1) translateY(0); } }
+.tdPopIn{ animation:tdPopIn 0.26s cubic-bezier(.22,.85,.32,1); }
+@keyframes tdStatPulse{ 0%{ transform:scale(1); } 32%{ transform:scale(1.2); color:var(--border-accent); } 100%{ transform:scale(1); } }
+.tdStatValue{ display:inline-block; }
+.tdStatValue.tdPulse{ animation:tdStatPulse 0.42s ease; }
+.tdStatCard{ position:relative; overflow:hidden; background:linear-gradient(165deg, var(--surface-1), var(--surface-2)); border:1px solid var(--border); border-radius:var(--radius); padding:5px 7px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 3px rgba(0,0,0,0.16); }
+.tdStatCard::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--border-accent); opacity:0.5; }
 .tdCtrlBtn .tdCtrlLabel{ word-break:keep-all; overflow-wrap:break-word; text-align:center; line-height:1.25; }
 @media (max-width:380px){
   .tdCtrlBtn{ font-size:9px; padding:8px 3px; gap:3px; }
@@ -15,16 +29,22 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
   .tdCtrlBtn{ font-size:8.3px; padding:7px 2px; }
 }
 #tdFusionOverlay.tdBattleCompact, #tdPassiveOverlay.tdBattleCompact{ inset:auto !important; top:6px; left:6px; right:6px; bottom:auto; width:auto; max-height:70%; background:rgba(10,12,18,0.72) !important; border-radius:12px; border:1px solid rgba(233,69,96,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.5); }
-.tdCtrlBtn{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:10px 4px; border-radius:12px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-primary); font-size:10.5px; font-weight:500; transition:transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease, border-color 0.15s ease; width:100%; height:100%;}
-.tdCtrlBtn:hover{ transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,0.18); }
-.tdCtrlBtn:active{ transform:translateY(0) scale(0.96); }
-.tdCtrlBtn .tdCtrlIcon{ color:var(--text-secondary); display:flex; }
-.tdCtrlBtn.tdActive{ background:var(--border-accent); border-color:var(--border-accent); color:#fff; }
+.tdCtrlBtn{position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:10px 4px; border-radius:12px; border:1px solid var(--border); background:linear-gradient(160deg, var(--surface-2), var(--surface-1)); color:var(--text-primary); font-size:10.5px; font-weight:500; transition:transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease, border-color 0.15s ease; width:100%; height:100%; box-shadow:0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05);}
+.tdCtrlBtn::before{ content:''; position:absolute; top:0; left:-60%; width:35%; height:100%; background:linear-gradient(120deg, transparent, rgba(255,255,255,0.16), transparent); transform:skewX(-18deg); transition:left 0.55s ease; pointer-events:none; }
+.tdCtrlBtn:hover::before{ left:130%; }
+.tdCtrlBtn:hover{ transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.07); border-color:var(--border-strong); }
+.tdCtrlBtn:active{ transform:translateY(0) scale(0.94); box-shadow:0 1px 2px rgba(0,0,0,0.2); }
+.tdCtrlBtn .tdCtrlIcon{ color:var(--text-secondary); display:flex; transition:transform 0.18s ease; }
+.tdCtrlBtn:hover .tdCtrlIcon{ transform:scale(1.14) rotate(-4deg); }
+@keyframes tdActiveGlow{ 0%,100%{ box-shadow:0 0 0 1px var(--border-accent), 0 0 9px rgba(111,155,255,0.35); } 50%{ box-shadow:0 0 0 1px var(--border-accent), 0 0 17px rgba(111,155,255,0.65); } }
+.tdCtrlBtn.tdActive{ background:linear-gradient(160deg, var(--border-accent), var(--border-accent)); border-color:var(--border-accent); color:#fff; animation:tdActiveGlow 2.4s ease-in-out infinite; }
 .tdCtrlBtn.tdActive .tdCtrlIcon{ color:#fff; }
 #tdAutoChoiceWrap{ position:relative; border-radius:13px; }
 #tdAutoBorderSvg{ position:absolute; inset:-4px; width:calc(100% + 8px); height:calc(100% + 8px); pointer-events:none; opacity:0; transition:opacity 0.2s ease; }
 #tdAutoChoiceWrap.tdSpinBorder #tdAutoBorderSvg{ opacity:1; }
-.tdTowerChip{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:64px; flex:0 0 auto; padding:7px 6px 6px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface-2); transition:transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease; touch-action:manipulation; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+.tdTowerChip{ position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; gap:3px; min-width:64px; flex:0 0 auto; padding:7px 6px 6px; border-radius:12px; border:1.5px solid var(--border); background:linear-gradient(160deg, var(--surface-2), var(--surface-1)); transition:transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease; touch-action:manipulation; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+.tdTowerChip::before{ content:''; position:absolute; top:0; left:-60%; width:35%; height:100%; background:linear-gradient(120deg, transparent, rgba(255,255,255,0.16), transparent); transform:skewX(-18deg); transition:left 0.55s ease; pointer-events:none; }
+.tdTowerChip:hover::before{ left:130%; }
 .tdTowerChip:hover{ transform:translateY(-2px); box-shadow:0 4px 10px rgba(0,0,0,0.2); }
 .tdTowerChip:active{ transform:translateY(0) scale(0.96); }
 .tdTowerChip.tdSelected{ border-color:var(--border-accent); box-shadow:0 0 0 2px var(--border-accent) inset; }
@@ -47,37 +67,37 @@ html,body{ margin:0; padding:0; background:#12161c; transition:background 0.2s e
 <div id="tdRoot" style="max-width:680px; margin:0 auto; display:flex; flex-direction:column; gap:9px; border-radius:14px; transition:background 0.2s ease, padding 0.2s ease;">
 
   <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px;">
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">골드</div>
-      <div style="font-size:13px; font-weight:500; color:var(--text-primary);" id="tdMoney">400골드</div>
+      <div class="tdStatValue" style="font-size:13px; font-weight:600; color:var(--text-primary);" id="tdMoney">400골드</div>
     </div>
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">생명</div>
-      <div style="font-size:13px; font-weight:500; color:var(--text-primary);" id="tdLives">20</div>
+      <div class="tdStatValue" style="font-size:13px; font-weight:600; color:var(--text-primary);" id="tdLives">20</div>
     </div>
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">웨이브</div>
-      <div style="font-size:13px; font-weight:500; color:var(--text-primary);" id="tdWave">0</div>
+      <div class="tdStatValue" style="font-size:13px; font-weight:600; color:var(--text-primary);" id="tdWave">0</div>
     </div>
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">배속</div>
-      <div style="font-size:13px; font-weight:500; color:var(--text-primary);" id="tdSpeedOut">1x</div>
+      <div class="tdStatValue" style="font-size:13px; font-weight:600; color:var(--text-primary);" id="tdSpeedOut">1x</div>
     </div>
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">치명타</div>
-      <div style="font-size:12px; font-weight:500; color:var(--text-primary);" id="tdCrit">8% x1.8</div>
+      <div class="tdStatValue" style="font-size:12px; font-weight:600; color:var(--text-primary);" id="tdCrit">8% x1.8</div>
     </div>
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">처치</div>
-      <div style="font-size:13px; font-weight:500; color:var(--text-primary);" id="tdKills">0</div>
+      <div class="tdStatValue" style="font-size:13px; font-weight:600; color:var(--text-primary);" id="tdKills">0</div>
     </div>
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">연구P</div>
-      <div style="font-size:13px; font-weight:500; color:var(--text-primary);" id="tdResearchP">0</div>
+      <div class="tdStatValue" style="font-size:13px; font-weight:600; color:var(--text-primary);" id="tdResearchP">0</div>
     </div>
-    <div style="background:var(--surface-1); border-radius:var(--radius); padding:4px 6px;">
+    <div class="tdStatCard">
       <div style="font-size:9px; color:var(--text-secondary);">다음선택</div>
-      <div style="font-size:13px; font-weight:500; color:var(--text-primary);" id="tdNextChoice">5</div>
+      <div class="tdStatValue" style="font-size:13px; font-weight:600; color:var(--text-primary);" id="tdNextChoice">5</div>
     </div>
   </div>
 
@@ -629,6 +649,10 @@ var COL=FIELD_THEMES[currentFieldTheme].dark;
 function applyTheme(){
   var th=THEME_VARS[darkMode?'dark':'light'];
   Object.keys(th).forEach(function(k){ tdRoot.style.setProperty(k, th[k]); });
+  // [버그 수정] --radius 커스텀 속성이 THEME_VARS/어디에도 정의된 적이 없어, 캔버스 테두리·전체
+  // 오버레이(게임오버 결과창 포함)·상단 수치 카드 등 var(--radius)를 쓰는 모든 요소가 지금까지
+  // 계속 0px(각진 모서리)로 렌더링되고 있었음 - 테마와 무관하게 한 번만 설정.
+  tdRoot.style.setProperty('--radius', '14px');
   var ft=FIELD_THEMES[currentFieldTheme]||FIELD_THEMES[FIELD_THEME_KEYS[0]];
   COL=ft[darkMode?'dark':'light'];
   COL.deco=ft.deco; COL.decoColor=darkMode? ft.decoDark : ft.decoLight;
@@ -4898,6 +4922,44 @@ document.getElementById('tdTutNextBtn').addEventListener('click', function(){
   try{
     if(!localStorage.getItem('mtdd_tutorial_seen')) openTutorial();
   }catch(e){}
+})();
+
+// [비주얼 개선] 상단 수치 카드(골드/생명/웨이브 등)가 값이 바뀔 때마다 살짝 튀어오르는 애니메이션을 재생하도록,
+// 매 값마다 업데이트 코드를 일일이 찾아 고치는 대신 MutationObserver로 텍스트 변경을 감지해 공통 처리함.
+(function setupStatCardPulse(){
+  ['tdMoney','tdLives','tdWave','tdSpeedOut','tdCrit','tdKills','tdResearchP','tdNextChoice'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el) return;
+    var mo=new MutationObserver(function(){
+      el.classList.remove('tdPulse');
+      void el.offsetWidth; // 리플로우를 강제해 같은 애니메이션을 다시 재생할 수 있게 함
+      el.classList.add('tdPulse');
+    });
+    mo.observe(el, {characterData:true, childList:true, subtree:true});
+  });
+})();
+
+// [비주얼 개선] 팝업/오버레이(게임오버 결과창, 합성, 일괄 업그레이드, 도감, 패치노트, 연구소, 랭킹 등)가
+// display:none -> flex/block 으로 바뀌어 "열리는" 순간을 감지해 자동으로 등장 애니메이션을 붙여준다.
+// 오버레이마다 여는 함수를 일일이 찾아 고치는 대신 공통 감시로 처리해 누락 없이 전부 적용됨.
+(function setupOverlayPopIn(){
+  var root=document.getElementById('tdRoot');
+  if(!root) return;
+  var mo=new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      if(m.attributeName!=='style') return;
+      var el=m.target;
+      if(!el || !el.style) return;
+      var disp=el.style.display;
+      if(disp!=='flex' && disp!=='block') return;
+      var old=m.oldValue||'';
+      if(/display:\s*(flex|block)/.test(old)) return; // 이미 열려있던 상태에서의 다른 스타일 변경이면 재생하지 않음
+      el.classList.remove('tdPopIn');
+      void el.offsetWidth;
+      el.classList.add('tdPopIn');
+    });
+  });
+  mo.observe(root, {attributes:true, attributeFilter:['style'], attributeOldValue:true, subtree:true});
 })();
 
 var CHOICE_TIME_LIMIT_MS=8000;
