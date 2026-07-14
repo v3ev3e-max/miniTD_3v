@@ -1352,8 +1352,15 @@ function nickKey(nick){ return nick.trim().normalize('NFC').toLowerCase(); }
 function dbNickKey(nick){ return encodeURIComponent(nickKey(nick)); }
 async function lookupEmailByNickname(nick){
   if(!fbReady()) return null;
-  var snap=await firebase.database().ref('nicknameIndex/'+dbNickKey(nick)).once('value');
+  var canonicalKey=dbNickKey(nick);
+  var snap=await firebase.database().ref('nicknameIndex/'+canonicalKey).once('value');
   var val=snap.val();
+  // 구버전은 닉네임 원문을 키로 저장했다. 기존 모바일 계정이 그 형식에만
+  // 남아 있어도 로그인할 수 있게 조회하고, 로그인 후 새 형식으로 마이그레이션한다.
+  if(!val && canonicalKey!==nickKey(nick)){
+    snap=await firebase.database().ref('nicknameIndex/'+nickKey(nick)).once('value');
+    val=snap.val();
+  }
   return (val && val.email) ? val.email : null;
 }
 async function registerNickname(nick, uid, email){
@@ -1378,6 +1385,12 @@ async function doLogin(nick, pin){
   var email=await lookupEmailByNickname(nick);
   if(!email){ var err=new Error('존재하지 않는 닉네임입니다.'); err.code='custom/nick-not-found'; throw err; }
   var cred=await firebase.auth().signInWithEmailAndPassword(email, pin);
+  // 인증된 상태에서 표준 인덱스를 복구한다. 구버전 키는 모바일 호환을 위해 유지한다.
+  try{
+    await registerNickname(nick, cred.user.uid, email);
+  }catch(e){
+    console.warn('nickname index migration failed', e);
+  }
   await loadOrInitSave(cred.user, nick);
   return cred;
 }
@@ -2694,6 +2707,15 @@ async function fetchLeaderboard(){
     if(!val) return [];
     var list=Object.keys(val).map(function(k){ return val[k]; });
     list.sort(function(a,b){ return (b.wave-a.wave) || (b.kills-a.kills) || (a.ts-b.ts); });
+    // 원문 키/인코딩 키가 함께 남은 구버전 기록은 같은 계정(또는 닉네임)의
+    // 최고 기록 하나만 표시한다.
+    var seen={};
+    list=list.filter(function(entry){
+      var identity=entry.uid ? 'uid:'+entry.uid : 'nick:'+nickKey(entry.name||'');
+      if(seen[identity]) return false;
+      seen[identity]=true;
+      return true;
+    });
     return list.slice(0,50);
   }catch(e){
     return [];
